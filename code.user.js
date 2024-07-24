@@ -305,13 +305,16 @@
 
 	inventoryHolder.addEventListener("dblclick", (e) => {
 		if (e.target.classList.contains('item')) {
-			const searchField = document.getElementById('searchField');
-			const searchButton = document.getElementById('makeSearch');
+			const searchField = document.getElementById("searchField");
+			const searchButton = document.getElementById("makeSearch");
+			const searchCategory = document.getElementById("categoryChoice")
 
-			if (searchField == null || searchButton == null) {
+			if (searchField == null || searchButton == null || searchCategory == null) {
 				return
 			}
 
+			searchCategory.setAttribute(data-catname, "")
+			searchCategory.setAttribute(data-cattype, "")
 			searchField.value = '';
 			searchField.value = getItemName();
 			searchButton.disabled = false;
