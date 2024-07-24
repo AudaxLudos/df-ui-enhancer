@@ -6,6 +6,9 @@
 // @version     1.0
 // @author      Audax
 // @description 7/24/2024, 7:12:59 AM
+// @homepageURL https://github.com/AudaxLudos/market-enhancer
+// @downloadURL https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
+// @updateURL   https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
 // ==/UserScript==
 
 (function () {
