@@ -313,8 +313,8 @@
 				return
 			}
 
-			searchCategory.setAttribute(data-catname, "")
-			searchCategory.setAttribute(data-cattype, "")
+			searchCategory.setAttribute("data-catname", "")
+			searchCategory.setAttribute("data-cattype", "")
 			searchField.value = '';
 			searchField.value = getItemName();
 			searchButton.disabled = false;
