@@ -9,8 +9,8 @@
 // @match       https://fairview.deadfrontier.com/onlinezombiemmo/*
 // @homepageURL https://github.com/AudaxLudos/market-enhancer
 // @supportURL  https://github.com/AudaxLudos/market-enhancer/issues
-// @downloadURL https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
-// @updateURL   https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
+// @downloadURL https://raw.githubusercontent.com/AudaxLudos/market-enhancer/main/code.user.js
+// @updateURL   https://raw.githubusercontent.com/AudaxLudos/market-enhancer/main/code.user.js
 // ==/UserScript==
 
 (function () {
