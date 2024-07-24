@@ -1,12 +1,14 @@
 // ==UserScript==
-// @name        Dead frontier Enhanced Market
-// @namespace   Violentmonkey Scripts
-// @match       https://fairview.deadfrontier.com/onlinezombiemmo/*
-// @grant       none
+// @name        Dead frontier Market Enhancer
+// @icon        https://www.google.com/s2/favicons?sz=64&domain=deadfrontier.com
+// @namespace   https://github.com/AudaxLudos/
+// @author      AudaxLudos
+// @license     MIT
 // @version     1.0
-// @author      Audax
-// @description 7/24/2024, 7:12:59 AM
+// @description Enhances the market and inventory UI for Dead Frontier 3D
+// @match       https://fairview.deadfrontier.com/onlinezombiemmo/*
 // @homepageURL https://github.com/AudaxLudos/market-enhancer
+// @supportURL  https://github.com/AudaxLudos/market-enhancer/issues
 // @downloadURL https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
 // @updateURL   https://github.com/AudaxLudos/market-enhancer/raw/main/code.user.js
 // ==/UserScript==
