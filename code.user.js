@@ -313,6 +313,7 @@
 				return
 			}
 
+			searchCategory.getElementById("cat").innerHTML = "Everything";
 			searchCategory.setAttribute("data-catname", "")
 			searchCategory.setAttribute("data-cattype", "")
 			searchField.value = '';
