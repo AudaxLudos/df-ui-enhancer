@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 (function () {
-	'use strict';
+	'use strict'
 
 	const itemsList = {}
 	const ammoList = {}
@@ -134,18 +134,18 @@
 	for (let i = 1; i <= maxWeapons; i++) {
 		let code = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_code`]
 		let isMelee = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_melee`]
-		weaponsList[code] = {};
+		weaponsList[code] = {}
 
 		for (let j = 0; j < weaponData.length; j++) {
-			let data = weaponData[j];
+			let data = weaponData[j]
 			if (data == "itemtype") {
 				weaponsList[code][data] = "weapon"
 				continue
 			}
-			weaponsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_${data}`];
+			weaponsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_${data}`]
 		}
 	}
-	unsafeWindow.weaponsList = weaponsList;
+	unsafeWindow.weaponsList = weaponsList
 
 	/***************************
 	 *
@@ -154,18 +154,18 @@
 	 ***************************/
 	for (let i = 1; i <= maxArmour; i++) {
 		let code = unsafeWindow.userVars[`GLOBALDATA_armour${i}_code`]
-		armourList[code] = {};
+		armourList[code] = {}
 
 		for (let j = 0; j < armourData.length; j++) {
-			let data = armourData[j];
+			let data = armourData[j]
 			if (data == "itemtype") {
 				armourList[code][data] = "armour"
 				continue
 			}
-			armourList[code][data] = unsafeWindow.userVars[`GLOBALDATA_armour${i}_${data}`];
+			armourList[code][data] = unsafeWindow.userVars[`GLOBALDATA_armour${i}_${data}`]
 		}
 	}
-	unsafeWindow.armourList = armourList;
+	unsafeWindow.armourList = armourList
 
 	/***************************
 	 *
@@ -178,10 +178,10 @@
 		let foodRestore = unsafeWindow.userVars[`GLOBALDATA_item${i}_foodrestore`]
 		let healthRestore = unsafeWindow.userVars[`GLOBALDATA_item${i}_healthrestore`]
 		let isCloth = unsafeWindow.userVars[`GLOBALDATA_item${i}_clothingtype`]
-		itemsList[code] = {};
+		itemsList[code] = {}
 
 		for (let j = 0; j < itemData.length; j++) {
-			let data = itemData[j];
+			let data = itemData[j]
 			if (data == "itemtype") {
 				itemsList[code][data] = "item"
 				continue
@@ -194,14 +194,14 @@
 				} else if (isCloth != null) {
 					itemsList[code][data] = `${findScrapValue(clothingScrapValues, level)}`
 				} else {
-					itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_scrapvalue`];
+					itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_scrapvalue`]
 				}
 				continue
 			}
-			itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_${data}`];
+			itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_${data}`]
 		}
 	}
-	unsafeWindow.itemsList = itemsList;
+	unsafeWindow.itemsList = itemsList
 
 	/***************************
 	 *
@@ -210,42 +210,42 @@
 	 ***************************/
 	for (let i = 1; i <= maxAmmo; i++) {
 		let code = unsafeWindow.userVars[`GLOBALDATA_ammo${i}_code`]
-		ammoList[code] = {};
+		ammoList[code] = {}
 
 		for (let j = 0; j < itemData.length; j++) {
-			let data = ammoData[j];
+			let data = ammoData[j]
 			if (data == "itemtype") {
 				ammoList[code][data] = "ammo"
 				continue
 			}
-			ammoList[code][data] = unsafeWindow.userVars[`GLOBALDATA_ammo${i}_${data}`];
+			ammoList[code][data] = unsafeWindow.userVars[`GLOBALDATA_ammo${i}_${data}`]
 		}
 	}
-	unsafeWindow.ammoList = ammoList;
+	unsafeWindow.ammoList = ammoList
 
 	/***************************
 	 *
 	 * Update dead frontier UI
 	 *
 	 ***************************/
-	const infoBox = unsafeWindow.infoBox;
-	var originalInfoCard = unsafeWindow.infoCard || null;
+	const infoBox = unsafeWindow.infoBox
+	var originalInfoCard = unsafeWindow.infoCard || null
 	if (originalInfoCard) {
-		inventoryHolder.removeEventListener("mousemove", originalInfoCard, false);
+		inventoryHolder.removeEventListener("mousemove", originalInfoCard, false)
 		unsafeWindow.infoCard = function (e) {
-			originalInfoCard(e);
+			originalInfoCard(e)
 
 			if (active || pageLock || !allowedInfoCard(e.target)) {
-				return;
+				return
 			}
-			let target;
+			let target
 			if (e.target.parentNode.classList.contains("fakeItem")) {
-				target = e.target.parentNode;
+				target = e.target.parentNode
 			} else {
-				target = e.target;
+				target = e.target
 			}
 			if (!target.classList.contains('item') && !target.classList.contains('fakeItem')) {
-				return;
+				return
 			}
 
 			const item = target.getAttribute("data-type").replace(/_.*/, '')
@@ -253,13 +253,13 @@
 			const quantity = target.getAttribute("data-quantity")
 
 			if (!item) {
-				return;
+				return
 			}
 
-			let element = document.getElementById("itemDataCustom");
+			let element = document.getElementById("itemDataCustom")
 			if (element != null && element.dataset.itemId === item) {
 				// No re-render needed
-				return;
+				return
 			}
 
 			const data = getItemData(item)
@@ -268,19 +268,19 @@
 				return
 			}
 
-			const infoContainer = document.createElement('div');
+			const infoContainer = document.createElement('div')
 			infoContainer.id = "itemDataCustom"
 			infoContainer.style.color = "orange"
 			infoContainer.style.fontStyle = "italic"
-			infoContainer.classList.add('itemData');
-			infoContainer.dataset.itemId = item;
+			infoContainer.classList.add('itemData')
+			infoContainer.dataset.itemId = item
 
-			let scrapValue = 0;
+			let scrapValue = 0
 			if (data.itemtype == "weapon") {
 				if (data.melee == 1) {
-					scrapValue = data.rare == 2 ? 50000 : findScrapValue(meleeScrapValues, data.pro_req);
+					scrapValue = data.rare == 2 ? 50000 : findScrapValue(meleeScrapValues, data.pro_req)
 				} else {
-					scrapValue = data.rare == 2 ? 100000 : findScrapValue(firearmScrapValues, data.pro_req);
+					scrapValue = data.rare == 2 ? 100000 : findScrapValue(firearmScrapValues, data.pro_req)
 				}
 			} else if (data.itemtype == "armour") {
 				scrapValue = findScrapValue(armourScrapValues, data.str)
@@ -296,30 +296,30 @@
 			infoContainer.innerHTML = `
 			<br/>
 			Scrap value: ${formatCurrency(scrapValue)}
-			`;
+			`
 
 			infoBox.appendChild(infoContainer)
-		}.bind(unsafeWindow);
-		inventoryHolder.addEventListener("mousemove", unsafeWindow.infoCard, false);
+		}.bind(unsafeWindow)
+		inventoryHolder.addEventListener("mousemove", unsafeWindow.infoCard, false)
 	}
 
 	inventoryHolder.addEventListener("dblclick", (e) => {
 		if (e.target.classList.contains('item')) {
-			const searchField = document.getElementById("searchField");
-			const searchButton = document.getElementById("makeSearch");
+			const searchField = document.getElementById("searchField")
+			const searchButton = document.getElementById("makeSearch")
 			const searchCategory = document.getElementById("categoryChoice")
 
 			if (searchField == null || searchButton == null || searchCategory == null) {
 				return
 			}
 
-			searchCategory.getElementById("cat").innerHTML = "Everything";
+			document.getElementById("categoryChoice").innerHTML = "Everything"
 			searchCategory.setAttribute("data-catname", "")
 			searchCategory.setAttribute("data-cattype", "")
-			searchField.value = '';
-			searchField.value = getItemName();
-			searchButton.disabled = false;
-			searchButton.click();
+			searchField.value = ''
+			searchField.value = getItemName()
+			searchButton.disabled = false
+			searchButton.click()
 		}
 	})
 
@@ -329,19 +329,19 @@
 	 *
 	 ***************************/
 	function getItemName() {
-		const infobox = document.querySelector('#infoBox > .itemName');
+		const infobox = document.querySelector('#infoBox > .itemName')
 		return infobox.innerText
 	}
 
 	function findScrapValue(levelsList, level) {
-		const keys = Object.keys(levelsList).map(Number).sort((a, b) => a - b);
+		const keys = Object.keys(levelsList).map(Number).sort((a, b) => a - b)
 
 		for (let i = 0; i < keys.length; i++) {
 			if (level < keys[i]) {
-				return levelsList[keys[i - 1]].scrapvalue;
+				return levelsList[keys[i - 1]].scrapvalue
 			}
 		}
-		return levelsList[keys[keys.length - 1]].scrapvalue; // if the value is greater than all keys
+		return levelsList[keys[keys.length - 1]].scrapvalue // if the value is greater than all keys
 	}
 
 	function formatCurrency(number) {
@@ -350,7 +350,7 @@
 			currency: 'USD',
 			minimumFractionDigits: 0,
 			maximumFractionDigits: 0
-		}).format(number);
+		}).format(number)
 	}
 
 	function getItemData(itemCode) {
@@ -368,4 +368,4 @@
 	function calculateAmmoScrapValue(amountPer, quantity) {
 		return amountPer * quantity * 2
 	}
-})();
+})()
