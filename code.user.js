@@ -16,6 +16,18 @@
 (function () {
 	'use strict'
 
+	/***************************
+	 *
+	 * Remove ad blocks
+	 *
+	 ***************************/
+	if (document.readyState === "complete") {
+		document.getElementById("fancybox-tmp").remove()
+		document.getElementById("fancybox-loading").remove()
+		document.getElementById("fancybox-overlay").remove()
+		document.getElementById("fancybox-wrap").remove()
+	}
+
 	const itemsList = {}
 	const ammoList = {}
 	const weaponsList = {}
@@ -124,6 +136,9 @@
 		"35": { scrapvalue: 19450 },
 		"45": { scrapvalue: 40250 },
 		"75": { scrapvalue: 128250 }
+	}
+	const implantScrapValues = {
+		
 	}
 
 	/***************************
