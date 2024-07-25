@@ -49,7 +49,7 @@
 	const armourData = [
 		"code",
 		"itemtype",
-		"str"
+		"shop_level"
 	]
 	const foodMedsScrapValues = {
 		"5": { scrapvalue: 15 },
@@ -133,7 +133,6 @@
 	 ***************************/
 	for (let i = 1; i <= maxWeapons; i++) {
 		let code = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_code`]
-		let isMelee = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_melee`]
 		weaponsList[code] = {}
 
 		for (let j = 0; j < weaponData.length; j++) {
@@ -283,7 +282,7 @@
 					scrapValue = data.rare == 2 ? 100000 : findScrapValue(firearmScrapValues, data.pro_req)
 				}
 			} else if (data.itemtype == "armour") {
-				scrapValue = findScrapValue(armourScrapValues, data.str)
+				scrapValue = findScrapValue(armourScrapValues, data.shop_level)
 			} else if (data.itemtype == "ammo") {
 				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
 			} else {
