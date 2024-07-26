@@ -40,6 +40,7 @@
 	const itemData = [
 		"code",
 		"itemtype",
+		"name",
 		"scrapvalue"
 	]
 	const maxAmmo = 30
@@ -51,6 +52,7 @@
 	const maxWeapons = unsafeWindow.userVars.GLOBALDATA_maxweapons
 	const weaponData = [
 		"code",
+		"name",
 		"itemtype",
 		"pro_req",
 		"melee",
@@ -59,12 +61,14 @@
 	const maxBackpacks = 30
 	const backpackData = [
 		"code",
+		"name",
 		"itemtype",
 		"slots"
 	]
 	const maxArmour = unsafeWindow.userVars.GLOBALDATA_maxarmour
 	const armourData = [
 		"code",
+		"name",
 		"itemtype",
 		"shop_level"
 	]
@@ -372,7 +376,6 @@
 			}
 
 			infoContainer.innerHTML = `
-			<br/>
 			Scrap value: ${formatCurrency(scrapValue)}
 			`
 
@@ -382,7 +385,7 @@
 	}
 
 	inventoryHolder.addEventListener("dblclick", (e) => {
-		if (e.target.classList.contains('item')) {
+		if (e.target.classList.contains('item') && unsafeWindow.marketHolder != null) {
 			const searchField = document.getElementById("searchField")
 			const searchButton = document.getElementById("makeSearch")
 			const searchCategory = document.getElementById("categoryChoice")
@@ -395,7 +398,8 @@
 			searchCategory.setAttribute("data-catname", "")
 			searchCategory.setAttribute("data-cattype", "")
 			searchField.value = ''
-			searchField.value = getItemName()
+			let itemName = e.target.getAttribute("data-type").replace(/_.*/, '')
+			searchField.value = getItemData(itemName).name
 			searchButton.disabled = false
 			searchButton.click()
 		}
@@ -406,11 +410,6 @@
 	 * Utility functions
 	 *
 	 ***************************/
-	function getItemName() {
-		const infobox = document.querySelector('#infoBox > .itemName')
-		return infobox.innerText
-	}
-
 	function findScrapValue(levelsList, level) {
 		const keys = Object.keys(levelsList).map(Number).sort((a, b) => a - b)
 
