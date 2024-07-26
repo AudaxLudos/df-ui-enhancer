@@ -21,12 +21,10 @@
 	 * Remove ad blocks
 	 *
 	 ***************************/
-	if (document.readyState === "complete") {
-		document.getElementById("fancybox-tmp").remove()
-		document.getElementById("fancybox-loading").remove()
-		document.getElementById("fancybox-overlay").remove()
-		document.getElementById("fancybox-wrap").remove()
-	}
+	document.getElementById("fancybox-tmp").remove()
+	document.getElementById("fancybox-loading").remove()
+	document.getElementById("fancybox-overlay").remove()
+	document.getElementById("fancybox-wrap").remove()
 
 	const itemsList = {}
 	const ammoList = {}
