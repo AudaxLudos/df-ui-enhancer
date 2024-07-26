@@ -56,9 +56,10 @@
 		"melee",
 		"rare"
 	]
-	const maxBackpacks = unsafeWindow.userVars.GLOBALDATA_maxarmour
+	const maxBackpacks = 30
 	const backpackData = [
 		"code",
+		"itemtype",
 		"slots"
 	]
 	const maxArmour = unsafeWindow.userVars.GLOBALDATA_maxarmour
@@ -165,6 +166,10 @@
 		let code = unsafeWindow.userVars[`GLOBALDATA_weapon${i}_code`]
 		weaponsList[code] = {}
 
+		if (code == null) {
+			continue
+		}
+
 		for (let j = 0; j < weaponData.length; j++) {
 			let data = weaponData[j]
 			if (data == "itemtype") {
@@ -185,6 +190,11 @@
 		let code = unsafeWindow.userVars[`GLOBALDATA_armour${i}_code`]
 		armourList[code] = {}
 
+		if (code == null) {
+			continue
+		}
+
+
 		for (let j = 0; j < armourData.length; j++) {
 			let data = armourData[j]
 			if (data == "itemtype") {
@@ -204,6 +214,10 @@
 	for (let i = 1; i <= maxBackpacks; i++) {
 		let code = unsafeWindow.userVars[`GLOBALDATA_backpack${i}_code`]
 		backpacksList[code] = {}
+
+		if (code == null) {
+			continue
+		}
 
 		for (let j = 0; j < backpackData.length; j++) {
 			let data = backpackData[j]
@@ -228,6 +242,10 @@
 		let healthRestore = unsafeWindow.userVars[`GLOBALDATA_item${i}_healthrestore`]
 		let isCloth = unsafeWindow.userVars[`GLOBALDATA_item${i}_clothingtype`]
 		itemsList[code] = {}
+
+		if (code == null) {
+			continue
+		}
 
 		for (let j = 0; j < itemData.length; j++) {
 			let data = itemData[j]
@@ -261,6 +279,10 @@
 		let code = unsafeWindow.userVars[`GLOBALDATA_ammo${i}_code`]
 		ammoList[code] = {}
 
+		if (code == null) {
+			continue
+		}
+
 		for (let j = 0; j < itemData.length; j++) {
 			let data = ammoData[j]
 			if (data == "itemtype") {
@@ -278,8 +300,8 @@
 	 *
 	 ***************************/
 	const infoBox = unsafeWindow.infoBox
-	document.getElementById("infoBox").style.pointerEvents = "none"
-	var originalInfoCard = unsafeWindow.infoCard || null
+	infoBox.style.pointerEvents = "none"
+	let originalInfoCard = unsafeWindow.infoCard || null
 	if (originalInfoCard) {
 		inventoryHolder.removeEventListener("mousemove", originalInfoCard, false)
 		unsafeWindow.infoCard = function (e) {
@@ -337,12 +359,12 @@
 			} else if (data.itemtype == "ammo") {
 				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
 			}  else if (data.itemtype == "backpack") {
-				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
+				scrapValue = findScrapValue(backpackScrapValues, data.slots)
 			} else {
 				scrapValue = data.scrapvalue
 			}
 			if (isMastercraft) {
-				if (data.itemtype == "backpack") {
+				if (data.itemtype == "backpack" && isMastercraft) {
 					scrapValue = scrapValue * 1.2 + scrapValue
 				} else {
 					scrapValue *= 2
@@ -414,8 +436,8 @@
 			return weaponsList[itemCode]
 		} else if (armourList[itemCode] != null) {
 			return armourList[itemCode]
-		} else if (backpackData[itemCode] != null) {
-			return backpackData[itemCode]
+		} else if (backpacksList[itemCode] != null) {
+			return backpacksList[itemCode]
 		} else if (ammoList[itemCode] != null) {
 			return ammoList[itemCode]
 		} else {
