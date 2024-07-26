@@ -278,7 +278,7 @@
 	 *
 	 ***************************/
 	const infoBox = unsafeWindow.infoBox
-	document.getElementById("infoBox").style.pointerEvents = none
+	document.getElementById("infoBox").style.pointerEvents = "none"
 	var originalInfoCard = unsafeWindow.infoCard || null
 	if (originalInfoCard) {
 		inventoryHolder.removeEventListener("mousemove", originalInfoCard, false)
