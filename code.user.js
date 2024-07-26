@@ -30,6 +30,7 @@
 	const ammoList = {}
 	const weaponsList = {}
 	const armourList = {}
+	const backpacksList = {}
 
 	if (unsafeWindow.userVars == null || unsafeWindow.inventoryHolder == null) {
 		return
@@ -54,6 +55,11 @@
 		"pro_req",
 		"melee",
 		"rare"
+	]
+	const maxBackpacks = unsafeWindow.userVars.GLOBALDATA_maxarmour
+	const backpackData = [
+		"code",
+		"slots"
 	]
 	const maxArmour = unsafeWindow.userVars.GLOBALDATA_maxarmour
 	const armourData = [
@@ -135,6 +141,17 @@
 		"45": { scrapvalue: 40250 },
 		"75": { scrapvalue: 128250 }
 	}
+	const backpackScrapValues = {
+		"1": { scrapvalue: 300 },
+		"2": { scrapvalue: 600 },
+		"3": { scrapvalue: 900 },
+		"4": { scrapvalue: 1200 },
+		"5": { scrapvalue: 1500 },
+		"6": { scrapvalue: 1800 },
+		"7": { scrapvalue: 2100 },
+		"8": { scrapvalue: 2400 },
+		"9": { scrapvalue: 2700 }
+	}
 	const implantScrapValues = {
 		
 	}
@@ -178,6 +195,26 @@
 		}
 	}
 	unsafeWindow.armourList = armourList
+
+	/***************************
+	 *
+	 * Get backpacks data
+	 *
+	 ***************************/
+	for (let i = 1; i <= maxBackpacks; i++) {
+		let code = unsafeWindow.userVars[`GLOBALDATA_backpack${i}_code`]
+		backpacksList[code] = {}
+
+		for (let j = 0; j < backpackData.length; j++) {
+			let data = backpackData[j]
+			if (data == "itemtype") {
+				backpacksList[code][data] = "backpack"
+				continue
+			}
+			backpacksList[code][data] = unsafeWindow.userVars[`GLOBALDATA_backpack${i}_${data}`]
+		}
+	}
+	unsafeWindow.backpacksList = backpacksList
 
 	/***************************
 	 *
@@ -298,11 +335,17 @@
 				scrapValue = findScrapValue(armourScrapValues, data.shop_level)
 			} else if (data.itemtype == "ammo") {
 				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
+			}  else if (data.itemtype == "backpack") {
+				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
 			} else {
 				scrapValue = data.scrapvalue
 			}
 			if (isMastercraft) {
-				scrapValue *= 2
+				if (data.itemtype == "backpack") {
+					scrapValue = scrapValue * 1.2 + scrapValue
+				} else {
+					scrapValue *= 2
+				}
 			}
 
 			infoContainer.innerHTML = `
@@ -370,6 +413,8 @@
 			return weaponsList[itemCode]
 		} else if (armourList[itemCode] != null) {
 			return armourList[itemCode]
+		} else if (backpackData[itemCode] != null) {
+			return backpackData[itemCode]
 		} else if (ammoList[itemCode] != null) {
 			return ammoList[itemCode]
 		} else {
