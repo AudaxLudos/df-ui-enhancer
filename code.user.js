@@ -26,8 +26,6 @@
 	// document.getElementById("DFAdBoxData").parentElement.remove()
 
 	var globalData = unsafeWindow.globalData;
-	var inventoryHolder = unsafeWindow.inventoryHolder
-	var marketHolder = unsafeWindow.marketHolder
 
 	if (unsafeWindow.userVars == null || unsafeWindow.inventoryHolder == null) {
 		return
@@ -98,40 +96,6 @@
 		inventoryHolder.addEventListener("mousemove", unsafeWindow.infoCard, false)
 	}
 
-	function quickSearchHandler(event) {
-		if (unsafeWindow.marketHolder == null) {
-			return
-		}
-		const searchField = document.getElementById("searchField")
-		const searchButton = document.getElementById("makeSearch")
-		const searchCategory = document.getElementById("categoryChoice")
-
-		if (searchField == null || searchButton == null || searchCategory == null) {
-			return
-		}
-
-		if (e.target.classList.contains('item')) {
-			document.getElementById("cat").innerHTML = "Everything"
-			searchCategory.setAttribute("data-catname", "")
-			searchCategory.setAttribute("data-cattype", "")
-			searchField.value = ''
-			let itemName = globalData[e.target.getAttribute("data-type").replace(/_.*/, '')].name
-			searchField.value = itemName
-			searchButton.disabled = false
-			searchButton.click()
-		}
-	}
-
-	function clearSearchHandler(event) {
-		const searchField = document.getElementById("searchField")
-		if (searchField == null) {
-			return
-		}
-		if (e.target.id == "cat" || e.target.id == "categoryChoice") {
-			searchField.value = ''
-		}
-	}
-
 	inventoryHolder.addEventListener("dblclick", (e) => {
 		if (unsafeWindow.marketHolder == null) {
 			return
@@ -182,11 +146,4 @@
 			maximumFractionDigits: 0
 		}).format(number)
 	}
-
-	/***************************
-	 *
-	 * Start script
-	 *
-	 ***************************/
-
 })()
