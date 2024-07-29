@@ -18,14 +18,14 @@
 
 	/***************************
 	 *
-	 * Remove ad blocks
+	 * Remove popups
 	 *
 	 ***************************/
-	document.getElementById("fancybox-tmp").remove()
-	document.getElementById("fancybox-loading").remove()
-	document.getElementById("fancybox-overlay").remove()
-	document.getElementById("fancybox-wrap").remove()
+	// document.getElementById("fancybox-overlay").style.display = "none"
+	// document.getElementById("fancybox-wrap").style.display = "none"
+	// document.getElementById("DFAdBoxData").parentElement.remove()
 
+	const globalItemsData = {}
 	const itemsList = {}
 	const ammoList = {}
 	const weaponsList = {}
@@ -41,11 +41,11 @@
 		"code",
 		"itemtype",
 		"name",
-		"scrapvalue"
 	]
 	const maxAmmo = 30
 	const ammoData = [
 		"code",
+		"name",
 		"itemtype",
 		"amountper"
 	]
@@ -72,94 +72,6 @@
 		"itemtype",
 		"shop_level"
 	]
-	const foodMedsScrapValues = {
-		"5": { scrapvalue: 15 },
-		"15": { scrapvalue: 45 },
-		"25": { scrapvalue: 140 },
-		"35": { scrapvalue: 245 },
-		"45": { scrapvalue: 505 },
-		"75": { scrapvalue: 1605 }
-	}
-	const clothingScrapValues = {
-		"0": { scrapvalue: 50 },
-		"5": { scrapvalue: 63 },
-		"10": { scrapvalue: 150 },
-		"15": { scrapvalue: 275 },
-		"20": { scrapvalue: 450 },
-		"25": { scrapvalue: 675 },
-		"30": { scrapvalue: 1400 },
-		"35": { scrapvalue: 1888 },
-		"40": { scrapvalue: 2450 },
-		"45": { scrapvalue: 3088 },
-		"50": { scrapvalue: 5050 },
-		"55": { scrapvalue: 6100 },
-		"60": { scrapvalue: 7012 },
-	}
-	const meleeScrapValues = {
-		"0": { scrapvalue: 50 },
-		"5": { scrapvalue: 63 },
-		"10": { scrapvalue: 100 },
-		"15": { scrapvalue: 163 },
-		"20": { scrapvalue: 450 },
-		"25": { scrapvalue: 675 },
-		"30": { scrapvalue: 950 },
-		"35": { scrapvalue: 1275 },
-		"40": { scrapvalue: 1650 },
-		"50": { scrapvalue: 2550 },
-		"60": { scrapvalue: 5450 },
-		"70": { scrapvalue: 7400 },
-		"80": { scrapvalue: 9650 },
-		"90": { scrapvalue: 12200 },
-		"100": { scrapvalue: 20050 },
-		"105": { scrapvalue: 22100 },
-		"110": { scrapvalue: 24250 },
-		"120": { scrapvalue: 28850 }
-	}
-	const firearmScrapValues = {
-		"5": { scrapvalue: 75 },
-		"10": { scrapvalue: 150 },
-		"15": { scrapvalue: 275 },
-		"20": { scrapvalue: 850 },
-		"25": { scrapvalue: 1300 },
-		"30": { scrapvalue: 1850 },
-		"35": { scrapvalue: 2500 },
-		"40": { scrapvalue: 3250 },
-		"45": { scrapvalue: 4100 },
-		"50": { scrapvalue: 5050 },
-		"55": { scrapvalue: 6100 },
-		"60": { scrapvalue: 10850 },
-		"70": { scrapvalue: 14750 },
-		"75": { scrapvalue: 16925 },
-		"80": { scrapvalue: 19250 },
-		"90": { scrapvalue: 24350 },
-		"95": { scrapvalue: 27125 },
-		"100": { scrapvalue: 40050 },
-		"105": { scrapvalue: 44150 },
-		"110": { scrapvalue: 48450 },
-		"120": { scrapvalue: 57650 },
-	}
-	const armourScrapValues = {
-		"5": { scrapvalue: 1050 },
-		"15": { scrapvalue: 3450 },
-		"25": { scrapvalue: 11050 },
-		"35": { scrapvalue: 19450 },
-		"45": { scrapvalue: 40250 },
-		"75": { scrapvalue: 128250 }
-	}
-	const backpackScrapValues = {
-		"1": { scrapvalue: 300 },
-		"2": { scrapvalue: 600 },
-		"3": { scrapvalue: 900 },
-		"4": { scrapvalue: 1200 },
-		"5": { scrapvalue: 1500 },
-		"6": { scrapvalue: 1800 },
-		"7": { scrapvalue: 2100 },
-		"8": { scrapvalue: 2400 },
-		"9": { scrapvalue: 2700 }
-	}
-	const implantScrapValues = {
-		
-	}
 
 	/***************************
 	 *
@@ -257,18 +169,6 @@
 				itemsList[code][data] = "item"
 				continue
 			}
-			if (data == "scrapvalue") {
-				if (foodRestore > 0) {
-					itemsList[code][data] = `${findScrapValue(foodMedsScrapValues, level)}`
-				} else if (healthRestore > 0) {
-					itemsList[code][data] = `${findScrapValue(foodMedsScrapValues, level)}`
-				} else if (isCloth != null) {
-					itemsList[code][data] = `${findScrapValue(clothingScrapValues, level)}`
-				} else {
-					itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_scrapvalue`]
-				}
-				continue
-			}
 			itemsList[code][data] = unsafeWindow.userVars[`GLOBALDATA_item${i}_${data}`]
 		}
 	}
@@ -351,22 +251,7 @@
 			infoContainer.classList.add('itemData')
 			infoContainer.dataset.itemId = item
 
-			let scrapValue = 0
-			if (data.itemtype == "weapon") {
-				if (data.melee == 1) {
-					scrapValue = data.rare == 2 ? 50000 : findScrapValue(meleeScrapValues, data.pro_req)
-				} else {
-					scrapValue = data.rare == 2 ? 100000 : findScrapValue(firearmScrapValues, data.pro_req)
-				}
-			} else if (data.itemtype == "armour") {
-				scrapValue = findScrapValue(armourScrapValues, data.shop_level)
-			} else if (data.itemtype == "ammo") {
-				scrapValue = calculateAmmoScrapValue(data.amountper, quantity)
-			}  else if (data.itemtype == "backpack") {
-				scrapValue = findScrapValue(backpackScrapValues, data.slots)
-			} else {
-				scrapValue = data.scrapvalue
-			}
+			let scrapValue = unsafeWindow.scrapValue(data.code, data.amountPer || 1)
 			if (isMastercraft) {
 				if (data.itemtype == "backpack" && isMastercraft) {
 					scrapValue = scrapValue * 1.2 + scrapValue
@@ -385,23 +270,40 @@
 	}
 
 	inventoryHolder.addEventListener("dblclick", (e) => {
-		if (e.target.classList.contains('item') && unsafeWindow.marketHolder != null) {
-			const searchField = document.getElementById("searchField")
-			const searchButton = document.getElementById("makeSearch")
-			const searchCategory = document.getElementById("categoryChoice")
+		if (unsafeWindow.marketHolder == null) {
+			return
+		}
+		const searchField = document.getElementById("searchField")
+		const searchButton = document.getElementById("makeSearch")
+		const searchCategory = document.getElementById("categoryChoice")
 
-			if (searchField == null || searchButton == null || searchCategory == null) {
-				return
-			}
+		if (searchField == null || searchButton == null || searchCategory == null) {
+			return
+		}
 
+		if (e.target.classList.contains('item')) {
 			document.getElementById("cat").innerHTML = "Everything"
 			searchCategory.setAttribute("data-catname", "")
 			searchCategory.setAttribute("data-cattype", "")
 			searchField.value = ''
 			let itemName = e.target.getAttribute("data-type").replace(/_.*/, '')
-			searchField.value = getItemData(itemName).name
+			itemName = getItemData(itemName).name.substring(0, 20);
+			searchField.value = itemName
 			searchButton.disabled = false
 			searchButton.click()
+		}
+	})
+
+	inventoryHolder.addEventListener("click", (e) => {
+		if (unsafeWindow.marketHolder == null) {
+			return
+		}
+		const searchField = document.getElementById("searchField")
+		if (searchField == null) {
+			return
+		}
+		if (e.target.id == "cat" || e.target.id == "categoryChoice") {
+			searchField.value = ''
 		}
 	})
 
@@ -410,7 +312,7 @@
 	 * Utility functions
 	 *
 	 ***************************/
-	function findScrapValue(levelsList, level) {
+	function getScrapValue(levelsList, level) {
 		const keys = Object.keys(levelsList).map(Number).sort((a, b) => a - b)
 
 		for (let i = 0; i < keys.length; i++) {
@@ -418,6 +320,7 @@
 				return levelsList[keys[i - 1]].scrapvalue
 			}
 		}
+
 		return levelsList[keys[keys.length - 1]].scrapvalue // if the value is greater than all keys
 	}
 
@@ -431,17 +334,7 @@
 	}
 
 	function getItemData(itemCode) {
-		if (weaponsList[itemCode] != null) {
-			return weaponsList[itemCode]
-		} else if (armourList[itemCode] != null) {
-			return armourList[itemCode]
-		} else if (backpacksList[itemCode] != null) {
-			return backpacksList[itemCode]
-		} else if (ammoList[itemCode] != null) {
-			return ammoList[itemCode]
-		} else {
-			return itemsList[itemCode]
-		}
+		return weaponsList[itemCode] || armourList[itemCode] || backpacksList[itemCode] || ammoList[itemCode] || itemsList[itemCode];
 	}
 
 	function calculateAmmoScrapValue(amountPer, quantity) {
