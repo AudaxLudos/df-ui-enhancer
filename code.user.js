@@ -21,9 +21,35 @@
 	 * Remove popups
 	 *
 	 ***************************/
-	// document.getElementById("fancybox-overlay").style.display = "none"
-	// document.getElementById("fancybox-wrap").style.display = "none"
-	// document.getElementById("DFAdBoxData").parentElement.remove()
+	function modifyUserInterface() {
+		if (unsafeWindow.jQuery == null) {
+			return;
+		}
+		if (window.location.href.indexOf("index.php?page=21") > -1) {
+			// Should only run when going out to inner city
+			// Hide flash/unity web player custom browser link
+			$("body > table:nth-child(1)").hide();
+			// Modify back to outpost button
+			$("form[action*='hotrods/hotfunctions.php'] > input[id=backToOutpostSubmit]").val('Return to Outpost');
+			$("form[action*='hotrods/hotfunctions.php'] > input[id=backToOutpostSubmit]").val('Return to Outpost');
+			$("form[action*='hotrods/hotfunctions.php']").parent().css({"max-width": "fit-content", "margin-left": "auto", "margin-right": "auto", "top": "-520px"});
+			// Hide open chat button
+			$("a[href='https://discordapp.com/invite/deadfrontier2']").parent().hide();
+			// Hide main footer
+			$("body > table:nth-child(2) > tbody > tr > td > table").hide();
+			return;
+		}
+		// Hide facebook like button
+		$("iframe[src*='https://www.facebook.com/plugins/like.php?href=https://www.facebook.com/OfficialDeadFrontier/&width&layout=button_count&action=like&show_faces=false&share=true&height=35&appId=']").hide();
+		// Hide social links
+		$("body > table:nth-child(2)").hide();
+		// Hide main footer
+		$("body > table:nth-child(3)").hide();
+	}
+
+	setTimeout(() => {
+		modifyUserInterface()
+	}, 50);
 
 	var globalData = unsafeWindow.globalData;
 
