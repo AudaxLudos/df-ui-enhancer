@@ -16,11 +16,6 @@
 (function () {
 	'use strict'
 
-	/***************************
-	 *
-	 * Remove popups
-	 *
-	 ***************************/
 	function modifyUserInterface() {
 		if (unsafeWindow.jQuery == null) {
 			return;
@@ -32,7 +27,7 @@
 			// Modify back to outpost button
 			$("form[action*='hotrods/hotfunctions.php'] > input[id=backToOutpostSubmit]").val('Return to Outpost');
 			$("form[action*='hotrods/hotfunctions.php'] > input[id=backToOutpostSubmit]").val('Return to Outpost');
-			$("form[action*='hotrods/hotfunctions.php']").parent().css({"max-width": "fit-content", "margin-left": "auto", "margin-right": "auto", "top": "-520px"});
+			$("form[action*='hotrods/hotfunctions.php']").parent().css({ "max-width": "fit-content", "margin-left": "auto", "margin-right": "auto", "top": "-520px" });
 			// Hide open chat button
 			$("a[href='https://discordapp.com/invite/deadfrontier2']").parent().hide();
 			// Hide main footer
@@ -47,9 +42,73 @@
 		$("body > table:nth-child(3)").hide();
 	}
 
+	function addOutpostQuickLinks() {
+		let outpostLinks = {
+			"Marketplace": "35", // marketplace
+			"Yard": "24", // yard
+			"Bank": "15", // bank
+			"Storage": "50", // storage
+			"Crafting": "59", // crafting
+			"Vendor": "84", // vendor
+			"Clan HQ": "56",
+			"Records": "22",
+			"Gambling Den": "49",
+			"Fast Travel": "61", // fast travel
+		}
+		let mainScreenEdge = $("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_edge.jpg']").offset();
+		if (!mainScreenEdge) {
+			return;
+		}
+		let linksContainer = document.createElement("div");
+		linksContainer.id = "customOutpostLinks"
+		linksContainer.style.cssText = `
+			width: 120px;
+			display: grid;
+			row-gap: 5px;
+			padding: 5px;
+			border: 1px solid #990000;
+			background-color: rgba(0, 0, 0, 0.8);
+			position: absolute;
+			top: ${mainScreenEdge.top}px;
+			left: ${mainScreenEdge.left + 60}px;
+			z-index: 20;
+		`;
+		// Outpost zones
+		for (const [key, value] of Object.entries(outpostLinks)) {
+			let linkDiv = document.createElement("div");
+			linkDiv.style.cssText = `
+				display: grid;
+				grid-template-columns: auto max-content;
+				text-align: center;
+			`;
+			let linkButton = document.createElement("button");
+			linkButton.setAttribute("data-page", value);
+			linkButton.setAttribute("data-mod", "0");
+			linkButton.setAttribute("data-sound", "1");
+			linkButton.innerHTML = key;
+			linkDiv.appendChild(linkButton);
+			linksContainer.appendChild(linkDiv);
+
+			// Change page on click
+			linkButton.addEventListener('click', function (event) {
+				unsafeWindow.nChangePage(event);
+			});
+		}
+		document.body.appendChild(linksContainer);
+		
+		// Adjust window when screen resizes
+		window.addEventListener('resize', function (event) {
+			let mainScreenEdge = $("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_edge.jpg']").offset();
+			let linksContainer = document.getElementById("customOutpostLinks");
+			linksContainer.style.top = `${mainScreenEdge.top}px`
+			linksContainer.style.left = `${mainScreenEdge.left + 60}px`
+		}, true);
+	}
+
 	setTimeout(() => {
-		modifyUserInterface()
-	}, 50);
+		addOutpostQuickLinks();
+		modifyUserInterface();
+	}, 500);
 
 	var globalData = unsafeWindow.globalData;
 
