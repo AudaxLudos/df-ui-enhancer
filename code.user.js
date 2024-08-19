@@ -78,11 +78,10 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
-		makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, null);
-		unsafeWindow.playSound("shop_buysell");
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
 	}
 
-	function updateInventory() {
+	function updateInventory(inventoryData) {
 		unsafeWindow.updateIntoArr(unsafeWindow.flshToArr(inventoryData, "DFSTATS_"), unsafeWindow.userVars);
 		unsafeWindow.populateInventory();
 		unsafeWindow.populateCharacterInventory();
@@ -90,19 +89,82 @@
 	}
 
 	function scrapInventoryHelper() {
-		let inventoryHolder = unsafeWindow.inventoryHolder;
-		if (inventoryHolder == null) {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=24") == -1) {
 			return;
 		}
-
-
 		let scrapAllButton = document.createElement("button");
 		scrapAllButton.id = "customScrapAllButton";
-		scrapAllButton.className = "opElem";
-		scrapAllButton.innerHTML = "Scrap Inventory";
-		inventoryHolder.appendChild(scrapAllButton);
+		scrapAllButton.innerHTML = "Scrap All Items";
+		scrapAllButton.classList.add("opElem");
+		scrapAllButton.style.top = "418px";
+		scrapAllButton.style.left = "410px";
+		unsafeWindow.inventoryHolder.appendChild(scrapAllButton);
 
-		scrapAllButton.addEventListener()
+		scrapAllButton.addEventListener("click", (e) => {
+			let prompt = document.getElementById("prompt");
+			let gamecontent = document.getElementById("gamecontent");
+			let validItems = [];
+			let totalCost = 0;
+
+			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
+				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
+				.forEach((slotWithItem) => {
+					let itemElement = slotWithItem.firstChild;
+					let id = itemElement.getAttribute("data-type");
+					let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
+					let scrapValue = unsafeWindow.scrapValue(id, quantity);
+					validItems.push({
+						slot: slotWithItem.getAttribute("data-slot"),
+						id: id,
+						scrapValue: scrapValue,
+					});
+					totalCost += scrapValue;
+				});
+
+			prompt.style.display = "block";
+			gamecontent.classList.add("warning");
+			gamecontent.innerHTML = `
+					Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">$${totalCost}</span>?
+				`;
+
+			let yesButton = document.createElement("button");
+			yesButton.style.position = "absolute";
+			yesButton.style.left = "86px";
+			yesButton.style.bottom = "8px";
+			yesButton.innerHTML = "Yes";
+			yesButton.addEventListener("click", async (e) => {
+				for (const [index, value] of validItems.entries()) {
+					await makeScrapRequest(value.id, value.slot, value.scrapValue);
+					await new Promise((resolve) => {
+						prompt.style.display = "block";
+						gamecontent.classList.remove("warning");
+						gamecontent.style.textAlign = "center";
+						gamecontent.innerHTML = `
+							Scrapping In-progress...
+						`;
+						unsafeWindow.playSound("shop_buysell");
+						if (index === validItems.length - 1) {
+							prompt.style.display = "none";
+							gamecontent.innerHTML = "";
+						}
+						resolve();
+					});
+					await new Promise((resolve) => setTimeout(resolve, Math.random() * (300 - 150) + 150));
+				}
+			});
+			gamecontent.appendChild(yesButton);
+
+			let noButton = document.createElement("button");
+			noButton.style.position = "absolute";
+			noButton.style.right = "86px";
+			noButton.style.bottom = "8px";
+			noButton.innerHTML = "No";
+			noButton.addEventListener("click", (e) => {
+				prompt.style.display = "none";
+				gamecontent.innerHTML = "";
+			});
+			gamecontent.appendChild(noButton);
+		});
 	}
 
 	function closePopupAds() {
@@ -253,13 +315,11 @@
 		closePopupAds();
 		addOutpostQuickLinks();
 		modifyUserInterface();
+		scrapInventoryHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
 			addClearSearchOnCategoryClickListener();
-			if (window.location.href.indexOf("index.php?page=24") > -1) {
-				test();
-			}
 		}
 	}, 500);
 })();
