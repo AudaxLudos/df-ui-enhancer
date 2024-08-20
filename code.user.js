@@ -99,10 +99,32 @@
 		requestParams["expected_itemprice"] = "-1";
 		requestParams["expected_itemtype2"] = "";
 		requestParams["expected_itemtype"] = itemId; // item code/id
-		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`;
+		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`; // storage slot
 		requestParams["itemnum"] = inventorySlot; // inventory slot
 		requestParams["price"] = itemScrapValue; // item scrap price
 		requestParams["action"] = "store";
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
+	}
+
+	function makeTakeRequest(itemId, storageSlot, itemScrapValue) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = "0";
+		requestParams["buynum"] = "0";
+		requestParams["renameto"] = "undefined`undefined";
+		requestParams["expected_itemprice"] = "-1";
+		requestParams["expected_itemtype2"] = "";
+		requestParams["expected_itemtype"] = itemId; // item code/id
+		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`; // inventory slot
+		requestParams["itemnum"] = storageSlot + 40; // storage slot
+		requestParams["price"] = itemScrapValue; // item scrap price
+		requestParams["action"] = "take";
 		requestParams["gv"] = "21";
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
@@ -180,11 +202,13 @@
 			yesButton.innerHTML = "Yes";
 			yesButton.addEventListener("click", async (e) => {
 				for (const [index, value] of validItems.entries()) {
-					await unsafeWindow.promptLoading("Scrapping In-progress")
+					await new Promise((resolve) => {
+						unsafeWindow.promptLoading("Scrapping inventory items...");
+						unsafeWindow.playSound("shop_buysell");
+						resolve();
+					});
 					await makeScrapRequest(value.id, value.slot, value.scrapValue);
 					await new Promise((resolve) => {
-						unsafeWindow.promptLoading("Scrapping In-progress")
-						unsafeWindow.playSound("shop_buysell");
 						if (index === validItems.length - 1) unsafeWindow.updateAllFields();
 						resolve();
 					});
@@ -212,17 +236,14 @@
 		}
 		let storeInventoryButton = document.createElement("button");
 		storeInventoryButton.id = "customStoreInventoryButton";
-		storeInventoryButton.innerHTML = "Transfer All Items";
+		storeInventoryButton.innerHTML = "Store All Items";
 		storeInventoryButton.classList.add("opElem");
 		storeInventoryButton.style.top = "418px";
 		storeInventoryButton.style.left = "120px";
 		unsafeWindow.inventoryHolder.appendChild(storeInventoryButton);
 
 		storeInventoryButton.addEventListener("click", async (e) => {
-			let prompt = document.getElementById("prompt");
-			let gamecontent = document.getElementById("gamecontent");
 			let validItems = [];
-
 			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
 				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
 				.forEach((slotWithItem) => {
@@ -239,21 +260,67 @@
 
 			for (const [index, value] of validItems.entries()) {
 				await new Promise((resolve) => {
-					prompt.style.display = "block";
-					gamecontent.style.textAlign = "center";
-					gamecontent.innerHTML = `
-							Transferring In-progress...
-						`;
+					unsafeWindow.promptLoading("Storing inventory items to storage...");
 					unsafeWindow.playSound("swap");
 					resolve();
 				});
 				await makeStoreRequest(value.id, value.slot, value.scrapValue);
 				await makeGetStorageRequest();
-				await sleep(Math.random() * (300 - 150) + 150);
+				await sleep(Math.random() * (100 - 50) + 50);
 				await new Promise((resolve) => {
-					if (index === validItems.length - 1) {
-						prompt.style.display = "none";
-						gamecontent.innerHTML = "";
+					if (index === validItems.length - 1) unsafeWindow.updateAllFields();
+					resolve();
+				});
+			}
+		});
+	}
+
+	function takeStorageHelper() {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=50") == -1) {
+			return;
+		}
+		let takeStorageButton = document.createElement("button");
+		takeStorageButton.id = "customStoreInventoryButton";
+		takeStorageButton.innerHTML = "Take All Items";
+		takeStorageButton.classList.add("opElem");
+		takeStorageButton.style.top = "71px";
+		takeStorageButton.style.left = "120px";
+		unsafeWindow.inventoryHolder.appendChild(takeStorageButton);
+
+		takeStorageButton.addEventListener("click", async (e) => {
+			let validItems = [];
+			let storageSlots = userVars.DFSTATS_df_storage_slots;
+
+			for (let i = 1; i <= storageSlots; i++) {
+				if (unsafeWindow.storageBox[`df_store${i}_type`] != null) {
+					let slot = i;
+					let id = unsafeWindow.storageBox[`df_store${i}_type`];
+					let quantity = unsafeWindow.storageBox[`df_store${i}_quantity`].replace(/\D/g,'');
+					let scrapValue = unsafeWindow.scrapValue(id, quantity);
+					validItems.push({
+						slot: slot,
+						id: id,
+						scrapValue: scrapValue,
+					});
+				}
+			}	
+
+			for (const [index, value] of validItems.entries()) {
+				await new Promise((resolve) => {
+					unsafeWindow.promptLoading("Taking storage items to inventory...");
+					unsafeWindow.playSound("swap");
+					resolve();
+				});
+				await makeTakeRequest(value.id, value.slot, value.scrapValue);
+				await makeGetStorageRequest();
+				await sleep(Math.random() * (100 - 50) + 50);
+				await new Promise((resolve, reject) => {
+					if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
+						reject("Inventory is full");
+						unsafeWindow.updateAllFields();
+						return;
+					} else if (index === validItems.length - 1) {
+						unsafeWindow.updateAllFields();
 					}
 					resolve();
 				});
@@ -414,6 +481,7 @@
 		modifyUserInterface();
 		scrapInventoryHelper();
 		storeStorageHelper();
+		takeStorageHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
