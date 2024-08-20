@@ -20,6 +20,13 @@
 	let userVars = unsafeWindow.userVars;
 	let tradeData = {};
 
+	////////////////////////////
+	// UTILITY FUNCTIONS
+	////////////////////////////
+	function sleep(ms) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
 	function serializeObject(obj) {
 		var pairs = [];
 		for (var prop in obj) {
@@ -81,13 +88,52 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
 	}
 
+	function makeStoreRequest(itemId, inventorySlot, itemScrapValue) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = "0";
+		requestParams["buynum"] = "0";
+		requestParams["renameto"] = "undefined`undefined";
+		requestParams["expected_itemprice"] = "-1";
+		requestParams["expected_itemtype2"] = "";
+		requestParams["expected_itemtype"] = itemId; // item code/id
+		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`;
+		requestParams["itemnum"] = inventorySlot; // inventory slot
+		requestParams["price"] = itemScrapValue; // item scrap price
+		requestParams["action"] = "store";
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
+	}
+
+	function makeGetStorageRequest() {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["sc"] = userVars["sc"];
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, updateStorage, null);
+	}
+
+	function updateStorage(storageData) {
+		unsafeWindow.storageBox = unsafeWindow.flshToArr(storageData);
+		unsafeWindow.populateStorage();
+	}
+
 	function updateInventory(inventoryData) {
 		unsafeWindow.updateIntoArr(unsafeWindow.flshToArr(inventoryData, "DFSTATS_"), unsafeWindow.userVars);
 		unsafeWindow.populateInventory();
 		unsafeWindow.populateCharacterInventory();
-		unsafeWindow.updateAllFields();
 	}
 
+	////////////////////////////
+	// UI ENCHANCERS
+	////////////////////////////
 	function scrapInventoryHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=24") == -1) {
 			return;
@@ -134,22 +180,15 @@
 			yesButton.innerHTML = "Yes";
 			yesButton.addEventListener("click", async (e) => {
 				for (const [index, value] of validItems.entries()) {
+					await unsafeWindow.promptLoading("Scrapping In-progress")
 					await makeScrapRequest(value.id, value.slot, value.scrapValue);
 					await new Promise((resolve) => {
-						prompt.style.display = "block";
-						gamecontent.classList.remove("warning");
-						gamecontent.style.textAlign = "center";
-						gamecontent.innerHTML = `
-							Scrapping In-progress...
-						`;
+						unsafeWindow.promptLoading("Scrapping In-progress")
 						unsafeWindow.playSound("shop_buysell");
-						if (index === validItems.length - 1) {
-							prompt.style.display = "none";
-							gamecontent.innerHTML = "";
-						}
+						if (index === validItems.length - 1) unsafeWindow.updateAllFields();
 						resolve();
 					});
-					await new Promise((resolve) => setTimeout(resolve, Math.random() * (300 - 150) + 150));
+					await sleep(Math.random() * (300 - 150) + 150);
 				}
 			});
 			gamecontent.appendChild(yesButton);
@@ -164,6 +203,61 @@
 				gamecontent.innerHTML = "";
 			});
 			gamecontent.appendChild(noButton);
+		});
+	}
+
+	function storeStorageHelper() {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=50") == -1) {
+			return;
+		}
+		let storeInventoryButton = document.createElement("button");
+		storeInventoryButton.id = "customStoreInventoryButton";
+		storeInventoryButton.innerHTML = "Transfer All Items";
+		storeInventoryButton.classList.add("opElem");
+		storeInventoryButton.style.top = "418px";
+		storeInventoryButton.style.left = "120px";
+		unsafeWindow.inventoryHolder.appendChild(storeInventoryButton);
+
+		storeInventoryButton.addEventListener("click", async (e) => {
+			let prompt = document.getElementById("prompt");
+			let gamecontent = document.getElementById("gamecontent");
+			let validItems = [];
+
+			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
+				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
+				.forEach((slotWithItem) => {
+					let itemElement = slotWithItem.firstChild;
+					let id = itemElement.getAttribute("data-type");
+					let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
+					let scrapValue = unsafeWindow.scrapValue(id, quantity);
+					validItems.push({
+						slot: slotWithItem.getAttribute("data-slot"),
+						id: id,
+						scrapValue: scrapValue,
+					});
+				});
+
+			for (const [index, value] of validItems.entries()) {
+				await new Promise((resolve) => {
+					prompt.style.display = "block";
+					gamecontent.style.textAlign = "center";
+					gamecontent.innerHTML = `
+							Transferring In-progress...
+						`;
+					unsafeWindow.playSound("swap");
+					resolve();
+				});
+				await makeStoreRequest(value.id, value.slot, value.scrapValue);
+				await makeGetStorageRequest();
+				await sleep(Math.random() * (300 - 150) + 150);
+				await new Promise((resolve) => {
+					if (index === validItems.length - 1) {
+						prompt.style.display = "none";
+						gamecontent.innerHTML = "";
+					}
+					resolve();
+				});
+			}
 		});
 	}
 
@@ -311,11 +405,15 @@
 		});
 	}
 
+	////////////////////////////
+	// INJECT SCRIPTS
+	////////////////////////////
 	setTimeout(() => {
 		closePopupAds();
 		addOutpostQuickLinks();
 		modifyUserInterface();
 		scrapInventoryHelper();
+		storeStorageHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
