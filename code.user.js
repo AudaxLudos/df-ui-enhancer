@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        Dead frontier Market Enhancer
+// @name        Dead frontier UI Enhancer
 // @icon        https://www.google.com/s2/favicons?sz=64&domain=deadfrontier.com
 // @namespace   https://github.com/AudaxLudos/
 // @author      AudaxLudos
@@ -203,6 +203,7 @@
 			yesButton.addEventListener("click", async (e) => {
 				for (const [index, value] of validItems.entries()) {
 					await new Promise((resolve) => {
+						gamecontent.classList.remove("warning");
 						unsafeWindow.promptLoading("Scrapping inventory items...");
 						unsafeWindow.playSound("shop_buysell");
 						resolve();
