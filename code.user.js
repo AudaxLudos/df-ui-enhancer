@@ -7,10 +7,10 @@
 // @version     1.0
 // @description Enhances the market and inventory UI for Dead Frontier 3D
 // @match       https://fairview.deadfrontier.com/onlinezombiemmo/*
-// @homepageURL https://github.com/AudaxLudos/market-enhancer
-// @supportURL  https://github.com/AudaxLudos/market-enhancer/issues
-// @downloadURL https://raw.githubusercontent.com/AudaxLudos/market-enhancer/main/code.user.js
-// @updateURL   https://raw.githubusercontent.com/AudaxLudos/market-enhancer/main/code.user.js
+// @homepageURL https://github.com/AudaxLudos/df-ui-enhancer
+// @supportURL  https://github.com/AudaxLudos/df-ui-enhancer/issues
+// @downloadURL https://raw.githubusercontent.com/AudaxLudos/df-ui-enhancer/main/code.user.js
+// @updateURL   https://raw.githubusercontent.com/AudaxLudos/df-ui-enhancer/main/code.user.js
 // ==/UserScript==
 
 (function () {
@@ -268,9 +268,14 @@
 				await makeStoreRequest(value.id, value.slot, value.scrapValue);
 				await makeGetStorageRequest();
 				await sleep(Math.random() * (100 - 50) + 50);
-				await new Promise((resolve) => {
-					if (index === validItems.length - 1) unsafeWindow.updateAllFields();
-					resolve();
+				await new Promise((resolve, reject) => {
+					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
+						reject("Storage is full");
+						unsafeWindow.updateAllFields();
+						return;
+					} else if (index === validItems.length - 1) {
+						unsafeWindow.updateAllFields();
+					}
 				});
 			}
 		});
@@ -296,7 +301,7 @@
 				if (unsafeWindow.storageBox[`df_store${i}_type`] != null) {
 					let slot = i;
 					let id = unsafeWindow.storageBox[`df_store${i}_type`];
-					let quantity = unsafeWindow.storageBox[`df_store${i}_quantity`].replace(/\D/g,'');
+					let quantity = unsafeWindow.storageBox[`df_store${i}_quantity`].replace(/\D/g, "");
 					let scrapValue = unsafeWindow.scrapValue(id, quantity);
 					validItems.push({
 						slot: slot,
@@ -304,7 +309,7 @@
 						scrapValue: scrapValue,
 					});
 				}
-			}	
+			}
 
 			for (const [index, value] of validItems.entries()) {
 				await new Promise((resolve) => {
@@ -367,6 +372,9 @@
 	}
 
 	function addOutpostQuickLinks() {
+		if (unsafeWindow.jQuery == null) {
+			return;
+		}
 		let outpostLinks = [
 			{ name: "Marketplace", id: "35" },
 			{ name: "Yard", id: "24" },
