@@ -267,7 +267,6 @@
 				});
 				await makeStoreRequest(value.id, value.slot, value.scrapValue);
 				await makeGetStorageRequest();
-				await sleep(Math.random() * (100 - 50) + 50);
 				await new Promise((resolve, reject) => {
 					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
 						reject("Storage is full");
@@ -276,7 +275,9 @@
 					} else if (index === validItems.length - 1) {
 						unsafeWindow.updateAllFields();
 					}
+					resolve();
 				});
+				await sleep(Math.random() * (100 - 50) + 50);
 			}
 		});
 	}
@@ -332,6 +333,61 @@
 				});
 			}
 		});
+	}
+
+	function replenishHungerHelper() {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
+			return;
+		}
+		let hungerElement = document.getElementsByClassName("playerNourishment")[0];
+		hungerElement.style.top = "";
+		let replenishHungerButton = document.createElement("button");
+		replenishHungerButton.id = "customReplenishHungerButton";
+		replenishHungerButton.classList.add("opElem");
+		replenishHungerButton.style.left = "37px";
+		replenishHungerButton.style.top = "25px";
+		replenishHungerButton.innerHTML = "Replenish";
+		hungerElement.parentElement.appendChild(replenishHungerButton);
+
+		// on element enter fetch trade data
+		// do not refetch data unless reload or a few seconds/minutes has passed
+		// on button click start replenishing process
+		// find appropriate food to replenish nourishment
+		// calculate if food needs to be cooked or not
+		//
+	}
+
+	function getFoodList() {
+		let foods = Object.values(globalData).filter((value) => {
+			return value["foodrestore"] > 0;
+		});
+		// add raw food restore to every food
+		// add cooked food restore to every food
+	}
+
+	function healHealthHelper() {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
+			return;
+		}
+		let healthElement = document.getElementsByClassName("playerHealth")[0];
+		healthElement.style.top = "";
+		let restoreHealthButton = document.createElement("button");
+		restoreHealthButton.id = "customRestoreHealthButton";
+		restoreHealthButton.innerHTML = "Restore";
+		healthElement.appendChild(document.createElement("br"));
+		healthElement.appendChild(restoreHealthButton);
+	}
+
+	function repairArmorHelper() {
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
+			return;
+		}
+		let armourElement = document.getElementById("sidebarArmour").getElementsByClassName("opElem")[0];
+		let repairArmorButton = document.createElement("button");
+		repairArmorButton.id = "customRepairArmorButtonButton";
+		repairArmorButton.innerHTML = "Repair";
+		armourElement.appendChild(document.createElement("br"));
+		armourElement.appendChild(repairArmorButton);
 	}
 
 	function closePopupAds() {
@@ -491,6 +547,9 @@
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
+		replenishHungerHelper();
+		healHealthHelper();
+		repairArmorHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
