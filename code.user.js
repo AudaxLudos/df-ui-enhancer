@@ -38,36 +38,22 @@
 		return pairs.join("&");
 	}
 
-	function makeRequest(requestUrl, requestParams, callbackFunc, callBackParams) {
-		return new Promise((resolve) => {
-			var xhttp = new XMLHttpRequest();
-			var payload = null;
-			xhttp.onreadystatechange = function () {
-				if (this.readyState == 4 && this.status == 200) {
-					//Invoke the callback with the request response text and some parameters, if any were supplied
-					//then resolve the Promise with the callback's reponse
-					let callbackResponse = null;
-					if (callbackFunc != null) {
-						callbackResponse = callbackFunc(this.responseText, callBackParams);
-					}
-					if (callbackResponse == null) {
-						callbackResponse = true;
-					}
-					resolve(callbackResponse);
-				}
-			};
-
-			payload = serializeObject(requestParams);
-
-			xhttp.open("POST", requestUrl, true);
-			xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-			xhttp.setRequestHeader("x-requested-with", "SilverScriptRequest");
-			payload = "hash=" + unsafeWindow.hash(payload) + "&" + payload;
-			xhttp.send(payload);
-		});
+	function makeRequest(requestUrl, requestParams, controller, callback, callbackParams) {
+		const payload = `hash=${unsafeWindow.hash(serializeObject(requestParams))}&${serializeObject(requestParams)}`;
+		return fetch(requestUrl, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+				"x-requested-with": "SilverScriptRequest",
+			},
+			body: payload,
+			signal: controller ? controller.signal : null,
+		})
+			.then((response) => response.text())
+			.then((response) => (callback ? callback(response, callbackParams) : true));
 	}
 
-	function makeScrapRequest(itemId, inventorySlot, itemScrapValue) {
+	function makeScrapRequest(itemId, inventorySlot, itemScrapValue, controller) {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
 		requestParams["templateID"] = "0";
@@ -85,10 +71,10 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
 	}
 
-	function makeStoreRequest(itemId, inventorySlot, itemScrapValue) {
+	function makeStoreRequest(itemId, inventorySlot, itemScrapValue, controller) {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
 		requestParams["templateID"] = "0";
@@ -107,10 +93,10 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
 	}
 
-	function makeTakeRequest(itemId, storageSlot, itemScrapValue) {
+	function makeTakeRequest(itemId, storageSlot, itemScrapValue, controller) {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
 		requestParams["templateID"] = "0";
@@ -129,7 +115,7 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, updateInventory, null);
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
 	}
 
 	function makeGetStorageRequest() {
@@ -139,18 +125,20 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, updateStorage, null);
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
 	}
 
 	function updateStorage(storageData) {
 		unsafeWindow.storageBox = unsafeWindow.flshToArr(storageData);
 		unsafeWindow.populateStorage();
+		unsafeWindow.updateAllFieldsBase();
 	}
 
 	function updateInventory(inventoryData) {
 		unsafeWindow.updateIntoArr(unsafeWindow.flshToArr(inventoryData, "DFSTATS_"), unsafeWindow.userVars);
 		unsafeWindow.populateInventory();
 		unsafeWindow.populateCharacterInventory();
+		unsafeWindow.updateAllFieldsBase();
 	}
 
 	////////////////////////////
@@ -169,6 +157,7 @@
 		unsafeWindow.inventoryHolder.appendChild(scrapAllButton);
 
 		scrapAllButton.addEventListener("click", (e) => {
+			const controller = new AbortController();
 			let prompt = document.getElementById("prompt");
 			let gamecontent = document.getElementById("gamecontent");
 			let validItems = [];
@@ -189,45 +178,27 @@
 					totalCost += scrapValue;
 				});
 
-			prompt.style.display = "block";
-			gamecontent.classList.add("warning");
-			gamecontent.innerHTML = `
-					Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">$${totalCost}</span>?
-				`;
+			openYesOrNoPrompt(
+				`Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">$${totalCost}</span>?`,
+				async (e) => {
+					if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
 
-			let yesButton = document.createElement("button");
-			yesButton.style.position = "absolute";
-			yesButton.style.left = "86px";
-			yesButton.style.bottom = "8px";
-			yesButton.innerHTML = "Yes";
-			yesButton.addEventListener("click", async (e) => {
-				for (const [index, value] of validItems.entries()) {
-					await new Promise((resolve) => {
-						gamecontent.classList.remove("warning");
-						unsafeWindow.promptLoading("Scrapping inventory items...");
-						unsafeWindow.playSound("shop_buysell");
-						resolve();
-					});
-					await makeScrapRequest(value.id, value.slot, value.scrapValue);
-					await new Promise((resolve) => {
-						if (index === validItems.length - 1) unsafeWindow.updateAllFields();
-						resolve();
-					});
-					await sleep(Math.random() * (300 - 150) + 150);
-				}
-			});
-			gamecontent.appendChild(yesButton);
-
-			let noButton = document.createElement("button");
-			noButton.style.position = "absolute";
-			noButton.style.right = "86px";
-			noButton.style.bottom = "8px";
-			noButton.innerHTML = "No";
-			noButton.addEventListener("click", (e) => {
-				prompt.style.display = "none";
-				gamecontent.innerHTML = "";
-			});
-			gamecontent.appendChild(noButton);
+					for (const [index, value] of validItems.entries()) {
+						await makeScrapRequest(value.id, value.slot, value.scrapValue, controller)
+							.then(() => unsafeWindow.playSound("shop_buysell"))
+							.then(() => {
+								if (index === validItems.length - 1) {
+									unsafeWindow.updateAllFields();
+								}
+							})
+							.catch((error) => {
+								unsafeWindow.updateAllFields();
+								throw error;
+							});
+					}
+				},
+				(e) => unsafeWindow.updateAllFields()
+			);
 		});
 	}
 
@@ -244,7 +215,9 @@
 		unsafeWindow.inventoryHolder.appendChild(storeInventoryButton);
 
 		storeInventoryButton.addEventListener("click", async (e) => {
+			const controller = new AbortController();
 			let validItems = [];
+
 			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
 				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
 				.forEach((slotWithItem) => {
@@ -259,25 +232,23 @@
 					});
 				});
 
+			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
+
 			for (const [index, value] of validItems.entries()) {
-				await new Promise((resolve) => {
-					unsafeWindow.promptLoading("Storing inventory items to storage...");
-					unsafeWindow.playSound("swap");
-					resolve();
-				});
-				await makeStoreRequest(value.id, value.slot, value.scrapValue);
-				await makeGetStorageRequest();
-				await new Promise((resolve, reject) => {
-					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
-						reject("Storage is full");
+				await makeStoreRequest(value.id, value.slot, value.scrapValue, controller)
+					.then(() => unsafeWindow.playSound("swap"))
+					.then(() => makeGetStorageRequest())
+					.then(() => {
+						if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
+							throw "Storage is full";
+						} else if (index === validItems.length - 1) {
+							unsafeWindow.updateAllFields();
+						}
+					})
+					.catch((error) => {
 						unsafeWindow.updateAllFields();
-						return;
-					} else if (index === validItems.length - 1) {
-						unsafeWindow.updateAllFields();
-					}
-					resolve();
-				});
-				await sleep(Math.random() * (100 - 50) + 50);
+						throw error;
+					});
 			}
 		});
 	}
@@ -295,8 +266,9 @@
 		unsafeWindow.inventoryHolder.appendChild(takeStorageButton);
 
 		takeStorageButton.addEventListener("click", async (e) => {
+			const controller = new AbortController();
+			const storageSlots = userVars.DFSTATS_df_storage_slots;
 			let validItems = [];
-			let storageSlots = userVars.DFSTATS_df_storage_slots;
 
 			for (let i = 1; i <= storageSlots; i++) {
 				if (unsafeWindow.storageBox[`df_store${i}_type`] != null) {
@@ -312,25 +284,23 @@
 				}
 			}
 
+			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
+
 			for (const [index, value] of validItems.entries()) {
-				await new Promise((resolve) => {
-					unsafeWindow.promptLoading("Taking storage items to inventory...");
-					unsafeWindow.playSound("swap");
-					resolve();
-				});
-				await makeTakeRequest(value.id, value.slot, value.scrapValue);
-				await makeGetStorageRequest();
-				await sleep(Math.random() * (100 - 50) + 50);
-				await new Promise((resolve, reject) => {
-					if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
-						reject("Inventory is full");
+				await makeTakeRequest(value.id, value.slot, value.scrapValue, controller)
+					.then(() => unsafeWindow.playSound("swap"))
+					.then(() => makeGetStorageRequest())
+					.then(() => {
+						if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
+							throw "Inventory is full";
+						} else if (index === validItems.length - 1) {
+							unsafeWindow.updateAllFields();
+						}
+					})
+					.catch((error) => {
 						unsafeWindow.updateAllFields();
-						return;
-					} else if (index === validItems.length - 1) {
-						unsafeWindow.updateAllFields();
-					}
-					resolve();
-				});
+						throw error;
+					});
 			}
 		});
 	}
@@ -382,12 +352,63 @@
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
-		let armourElement = document.getElementById("sidebarArmour").getElementsByClassName("opElem")[0];
+		let armourElement = document.getElementById("sidebarArmour");
 		let repairArmorButton = document.createElement("button");
-		repairArmorButton.id = "customRepairArmorButtonButton";
-		repairArmorButton.innerHTML = "Repair";
-		armourElement.appendChild(document.createElement("br"));
+		repairArmorButton.id = "customRepairArmorButton";
+		repairArmorButton.classList.add("opElem");
+		repairArmorButton.style.left = "46px";
+		repairArmorButton.style.top = "29px";
+		repairArmorButton.textContent = "Repair";
 		armourElement.appendChild(repairArmorButton);
+
+		repairArmorButton.addEventListener("click", () => {
+			openYesOrNoPrompt(
+				``,
+				(e) => {},
+				(e) => unsafeWindow.updateAllFields()
+			);
+		});
+	}
+
+	function openCancelPrompt(message, callback) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.remove("warning");
+		gamecontent.innerHTML = message;
+		let cancelButton = document.createElement("button");
+		cancelButton.textContent = "Cancel";
+		cancelButton.addEventListener("click", callback);
+
+		gamecontent.append(cancelButton);
+	}
+
+	unsafeWindow.openCancelPrompt = openCancelPrompt("test", null);
+
+	function openYesOrNoPrompt(message, yesCallback, noCallback) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.add("warning");
+		gamecontent.innerHTML = message;
+
+		let yesButton = document.createElement("button");
+		yesButton.style.position = "absolute";
+		yesButton.style.left = "86px";
+		yesButton.style.bottom = "8px";
+		yesButton.innerHTML = "Yes";
+		yesButton.addEventListener("click", yesCallback);
+		gamecontent.appendChild(yesButton);
+
+		let noButton = document.createElement("button");
+		noButton.style.position = "absolute";
+		noButton.style.right = "86px";
+		noButton.style.bottom = "8px";
+		noButton.innerHTML = "No";
+		noButton.addEventListener("click", noCallback);
+		gamecontent.appendChild(noButton);
 	}
 
 	function closePopupAds() {
