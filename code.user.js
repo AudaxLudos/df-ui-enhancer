@@ -128,6 +128,56 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
 	}
 
+	function requestRepairServices() {
+		var requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
+		requestParams["searchname"] = "";
+		requestParams["memID"] = "";
+		requestParams["searchtype"] = "buyinglist";
+		requestParams["profession"] = "Engineer";
+		requestParams["category"] = "";
+		requestParams["search"] = "services";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterServiceResponseText, null);
+	}
+
+	function filterServiceResponseText(response) {
+		//Get length of response list
+		let services = {};
+		var responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
+		if (response != "") {
+			for (var i = 0; i < responseLength; i++) {
+				//If we don't already have price for this level, fetch the lowest
+				var serviceLevel = parseInt(
+					response
+						.match(new RegExp("tradelist_" + i + "_level=[0-9]+&"))[0]
+						.split("=")[1]
+						.match(/[0-9]+/)[0]
+				);
+				if (services[serviceLevel] == undefined) {
+					services[serviceLevel] = [];
+				}
+				var service = {};
+				service["userID"] = parseInt(
+					response
+						.match(new RegExp("tradelist_" + i + "_id_member=[0-9]+&"))[0]
+						.split("=")[1]
+						.match(/[0-9]+/)[0]
+				);
+				service["price"] = parseInt(
+					response
+						.match(new RegExp("tradelist_" + i + "_price=[0-9]+&"))[0]
+						.split("=")[1]
+						.match(/[0-9]+/)[0]
+				);
+				services[serviceLevel].push(service);
+			}
+		}
+		return services;
+		console.log(services);
+	}
+
 	function updateStorage(storageData) {
 		unsafeWindow.storageBox = unsafeWindow.flshToArr(storageData);
 		unsafeWindow.populateStorage();
@@ -158,30 +208,15 @@
 
 		scrapAllButton.addEventListener("click", (e) => {
 			const controller = new AbortController();
-			let prompt = document.getElementById("prompt");
-			let gamecontent = document.getElementById("gamecontent");
-			let validItems = [];
+			let validItems = getInventorySlotsWithItem();
 			let totalCost = 0;
 
-			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
-				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
-				.forEach((slotWithItem) => {
-					let itemElement = slotWithItem.firstChild;
-					let id = itemElement.getAttribute("data-type");
-					let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
-					let scrapValue = unsafeWindow.scrapValue(id, quantity);
-					validItems.push({
-						slot: slotWithItem.getAttribute("data-slot"),
-						id: id,
-						scrapValue: scrapValue,
-					});
-					totalCost += scrapValue;
-				});
+			validItems.forEach((value) => (totalCost += value["scrapValue"]));
 
 			openYesOrNoPrompt(
 				`Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">$${totalCost}</span>?`,
 				async (e) => {
-					if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
+					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
 
 					for (const [index, value] of validItems.entries()) {
 						await makeScrapRequest(value.id, value.slot, value.scrapValue, controller)
@@ -191,6 +226,7 @@
 									unsafeWindow.updateAllFields();
 								}
 							})
+							.then(() => sleep(Math.random() * (300 - 50) + 50))
 							.catch((error) => {
 								unsafeWindow.updateAllFields();
 								throw error;
@@ -216,21 +252,7 @@
 
 		storeInventoryButton.addEventListener("click", async (e) => {
 			const controller = new AbortController();
-			let validItems = [];
-
-			[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
-				.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
-				.forEach((slotWithItem) => {
-					let itemElement = slotWithItem.firstChild;
-					let id = itemElement.getAttribute("data-type");
-					let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
-					let scrapValue = unsafeWindow.scrapValue(id, quantity);
-					validItems.push({
-						slot: slotWithItem.getAttribute("data-slot"),
-						id: id,
-						scrapValue: scrapValue,
-					});
-				});
+			let validItems = getInventorySlotsWithItem();
 
 			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
 
@@ -245,6 +267,7 @@
 							unsafeWindow.updateAllFields();
 						}
 					})
+					.then(() => sleep(Math.random() * (50 - 0) + 0))
 					.catch((error) => {
 						unsafeWindow.updateAllFields();
 						throw error;
@@ -284,7 +307,7 @@
 				}
 			}
 
-			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
+			if (validItems.length > 0) openCancelPrompt("Taking storage items to inventory...", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
 				await makeTakeRequest(value.id, value.slot, value.scrapValue, controller)
@@ -297,6 +320,7 @@
 							unsafeWindow.updateAllFields();
 						}
 					})
+					.then(() => sleep(Math.random() * (50 - 0) + 0))
 					.catch((error) => {
 						unsafeWindow.updateAllFields();
 						throw error;
@@ -348,7 +372,7 @@
 		healthElement.appendChild(restoreHealthButton);
 	}
 
-	function repairArmorHelper() {
+	async function repairArmorHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
@@ -359,15 +383,40 @@
 		repairArmorButton.style.left = "46px";
 		repairArmorButton.style.top = "29px";
 		repairArmorButton.textContent = "Repair";
+		repairArmorButton.disabled = true;
 		armourElement.appendChild(repairArmorButton);
+
+		let tradeList = await requestRepairServices();
 
 		repairArmorButton.addEventListener("click", () => {
 			openYesOrNoPrompt(
-				``,
-				(e) => {},
+				`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">$${"0000000"}</span>?`,
+				(e) => {
+					// unequip armor
+					// repair armor by buying service
+					// requip armor
+				},
 				(e) => unsafeWindow.updateAllFields()
 			);
 		});
+	}
+
+	function getInventorySlotsWithItem() {
+		let validItems = [];
+		[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
+			.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
+			.forEach((slotWithItem) => {
+				let itemElement = slotWithItem.firstChild;
+				let id = itemElement.getAttribute("data-type");
+				let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
+				let scrapValue = unsafeWindow.scrapValue(id, quantity);
+				validItems.push({
+					slot: slotWithItem.getAttribute("data-slot"),
+					id: id,
+					scrapValue: scrapValue,
+				});
+			});
+		return validItems;
 	}
 
 	function openCancelPrompt(message, callback) {
@@ -376,15 +425,17 @@
 
 		prompt.style.display = "block";
 		gamecontent.classList.remove("warning");
-		gamecontent.innerHTML = message;
+		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
+
 		let cancelButton = document.createElement("button");
 		cancelButton.textContent = "Cancel";
+		cancelButton.style.position = "absolute";
+		cancelButton.style.left = "111px";
+		cancelButton.style.bottom = "8px";
 		cancelButton.addEventListener("click", callback);
 
 		gamecontent.append(cancelButton);
 	}
-
-	unsafeWindow.openCancelPrompt = openCancelPrompt("test", null);
 
 	function openYesOrNoPrompt(message, yesCallback, noCallback) {
 		let prompt = document.getElementById("prompt");
