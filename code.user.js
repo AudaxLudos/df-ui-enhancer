@@ -128,8 +128,74 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
 	}
 
+	function makeUnequipArmourRequest(itemId, slot) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = "0";
+		requestParams["buynum"] = "0";
+		requestParams["renameto"] = "undefined`undefined";
+		requestParams["expected_itemprice"] = "-1";
+		requestParams["expected_itemtype2"] = itemId; // equipping/swapping
+		requestParams["expected_itemtype"] = ""; // unequipping/swapping
+		requestParams["itemnum2"] = "34"; // inventory/equipment/storage slot
+		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
+		requestParams["price"] = unsafeWindow.getUpgradePrice();
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+		requestParams["action"] = "newequip";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
+	}
+
+	function makeEquipArmourRequest(itemId, slot) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = "0";
+		requestParams["buynum"] = "0";
+		requestParams["renameto"] = "undefined`undefined";
+		requestParams["expected_itemprice"] = "-1";
+		requestParams["expected_itemtype2"] = ""; // equipping/swapping
+		requestParams["expected_itemtype"] = itemId; // unequipping/swapping
+		requestParams["itemnum2"] = "34"; // inventory/equipment/storage slot
+		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
+		requestParams["price"] = unsafeWindow.getUpgradePrice();
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+		requestParams["action"] = "newequip";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
+	}
+
+	function makeBuyServiceRequest(providerId, itemPrice, slot) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = "0";
+		requestParams["buynum"] = providerId;
+		requestParams["renameto"] = "undefined`undefined";
+		requestParams["expected_itemprice"] = itemPrice;
+		requestParams["expected_itemtype2"] = ""; // equipping/swapping
+		requestParams["expected_itemtype"] = ""; // unequipping/swapping
+		requestParams["itemnum2"] = "0"; // inventory/equipment/storage slot
+		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
+		requestParams["price"] = unsafeWindow.getUpgradePrice();
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+		requestParams["action"] = "buyrepair";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
+	}
+
 	function requestRepairServices() {
-		var requestParams = {};
+		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
 		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
 		requestParams["searchname"] = "";
@@ -143,12 +209,10 @@
 	}
 
 	function filterServiceResponseText(response) {
-		//Get length of response list
 		let services = {};
 		var responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
 		if (response != "") {
 			for (var i = 0; i < responseLength; i++) {
-				//If we don't already have price for this level, fetch the lowest
 				var serviceLevel = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_level=[0-9]+&"))[0]
@@ -159,7 +223,7 @@
 					services[serviceLevel] = [];
 				}
 				var service = {};
-				service["userID"] = parseInt(
+				service["userId"] = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_id_member=[0-9]+&"))[0]
 						.split("=")[1]
@@ -175,7 +239,6 @@
 			}
 		}
 		return services;
-		console.log(services);
 	}
 
 	function updateStorage(storageData) {
@@ -377,7 +440,11 @@
 			return;
 		}
 		let armourElement = document.getElementById("sidebarArmour");
-		let repairArmorButton = document.createElement("button");
+		let repairArmorButton = document.getElementById("customRepairArmorButton");
+		if (repairArmorButton != null) {
+			repairArmorButton.remove();
+		}
+		repairArmorButton = document.createElement("button");
 		repairArmorButton.id = "customRepairArmorButton";
 		repairArmorButton.classList.add("opElem");
 		repairArmorButton.style.left = "46px";
@@ -386,18 +453,56 @@
 		repairArmorButton.disabled = true;
 		armourElement.appendChild(repairArmorButton);
 
-		let tradeList = await requestRepairServices();
+		var playerCash = userVars["DFSTATS_df_cash"];
+		let playerArmour = userVars["DFSTATS_df_armourtype"];
+		let armourData = globalData[playerArmour.split("_")[0]];
+		let armourRepairLevel = armourData["shop_level"] - 5;
+		let inventorySlotNumber = unsafeWindow.findFirstEmptyGenericSlot("inv");
 
-		repairArmorButton.addEventListener("click", () => {
-			openYesOrNoPrompt(
-				`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">$${"0000000"}</span>?`,
-				(e) => {
-					// unequip armor
-					// repair armor by buying service
-					// requip armor
-				},
-				(e) => unsafeWindow.updateAllFields()
-			);
+		if (playerArmour == "") {
+			throw "No equipped armour found";
+		}
+		if (parseInt(userVars["DFSTATS_df_armourhp"]) >= parseInt(userVars["DFSTATS_df_armourhpmax"])) {
+			throw "Armour not in need of repairs";
+		}
+		if (inventorySlotNumber === false) {
+			throw "Inventory is full";
+		}
+
+		await requestRepairServices().then((response) => {
+			if (response[armourRepairLevel] == null) {
+				throw `No level ${armourRepairLevel} repair service available`;
+			}
+
+			let serviceData = response[armourRepairLevel][0];
+
+			if (playerCash < serviceData["price"]) {
+				throw "You do not have enough cash";
+			}
+
+			repairArmorButton.disabled = false;
+			repairArmorButton.addEventListener("click", () => {
+				openYesOrNoPrompt(
+					`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">$${serviceData["price"]}</span>?`,
+					async (e) => {
+						openLoadingPrompt("Repairing armour...")
+						await makeUnequipArmourRequest(userVars["DFSTATS_df_armourtype"], inventorySlotNumber)
+							.then(() => makeBuyServiceRequest(serviceData["userId"], serviceData["price"], inventorySlotNumber))
+							.then(() => unsafeWindow.playSound("repair"))
+							.then(() => makeEquipArmourRequest(playerArmour, inventorySlotNumber))
+							.then(() => {
+								repairArmorHelper();
+								unsafeWindow.updateAllFields();
+							})
+							.catch((error) => {
+								repairArmorHelper();
+								unsafeWindow.updateAllFields();
+								throw error;
+							});
+					},
+					(e) => unsafeWindow.updateAllFields()
+				);
+			});
 		});
 	}
 
@@ -417,6 +522,15 @@
 				});
 			});
 		return validItems;
+	}
+
+	function openLoadingPrompt(message) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.remove("warning");
+		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
 	}
 
 	function openCancelPrompt(message, callback) {
