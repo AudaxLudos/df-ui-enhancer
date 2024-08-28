@@ -27,6 +27,15 @@
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
+	function formatCurrency(number) {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 0,
+		}).format(number);
+	}
+
 	function serializeObject(obj) {
 		var pairs = [];
 		for (var prop in obj) {
@@ -277,7 +286,7 @@
 			validItems.forEach((value) => (totalCost += value["scrapValue"]));
 
 			openYesOrNoPrompt(
-				`Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">$${totalCost}</span>?`,
+				`Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 				async (e) => {
 					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
 
@@ -328,6 +337,7 @@
 							throw "Storage is full";
 						} else if (index === validItems.length - 1) {
 							unsafeWindow.updateAllFields();
+							throw "Inventory is empty";
 						}
 					})
 					.then(() => sleep(Math.random() * (50 - 0) + 0))
@@ -422,7 +432,7 @@
 		// add cooked food restore to every food
 	}
 
-	function healHealthHelper() {
+	async function restoreHealthHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
@@ -430,9 +440,23 @@
 		healthElement.style.top = "";
 		let restoreHealthButton = document.createElement("button");
 		restoreHealthButton.id = "customRestoreHealthButton";
+		restoreHealthButton.classList.add("opElem");
+		restoreHealthButton.style.left = "43px";
+		restoreHealthButton.style.top = "25px";
 		restoreHealthButton.innerHTML = "Restore";
-		healthElement.appendChild(document.createElement("br"));
-		healthElement.appendChild(restoreHealthButton);
+		restoreHealthButton.disabled = true;
+		healthElement.parentElement.appendChild(restoreHealthButton);
+	}
+
+	function getSuitableMedsList() {
+		const meds = Object.values(globalData).filter((value) => value["healthrestore"] > 0);
+		console.log(meds);
+		const suitableLevel = Math.min(...Object.values(meds).map((value) => value["level"]));
+		console.log(suitableLevel);
+		const suitableMeds = Object.values(meds)
+			.filter((value) => parseInt(value["level"]) <= parseInt(userVars["DFSTATS_df_level"]))
+			.filter((value) => parseInt(value["level"]) === parseInt(suitableLevel));
+		return suitableMeds;
 	}
 
 	async function repairArmorHelper() {
@@ -483,9 +507,9 @@
 			repairArmorButton.disabled = false;
 			repairArmorButton.addEventListener("click", () => {
 				openYesOrNoPrompt(
-					`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">$${serviceData["price"]}</span>?`,
+					`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">${formatCurrency(serviceData["price"])}</span>?`,
 					async (e) => {
-						openLoadingPrompt("Repairing armour...")
+						openLoadingPrompt("Repairing armour...");
 						await makeUnequipArmourRequest(userVars["DFSTATS_df_armourtype"], inventorySlotNumber)
 							.then(() => makeBuyServiceRequest(serviceData["userId"], serviceData["price"], inventorySlotNumber))
 							.then(() => unsafeWindow.playSound("repair"))
@@ -595,10 +619,12 @@
 			$("body > table:nth-child(1)").hide();
 			// Modify back to outpost button
 			$("form[action*='hotrods/hotfunctions.php'] > input[id=backToOutpostSubmit]").val("Return to Outpost");
-			$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.maxWidth = "fit-content";
-			$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.marginLeft = "auto";
-			$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.marginRight = "auto";
-			$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.top = "-520px";
+			if ($("form[action*='hotrods/hotfunctions.php']").parent()[0] != null) {
+				$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.maxWidth = "fit-content";
+				$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.marginLeft = "auto";
+				$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.marginRight = "auto";
+				$("form[action*='hotrods/hotfunctions.php']").parent()[0].style.top = "-520px";
+			}
 			// Hide open chat button
 			$("a[href='https://discordapp.com/invite/deadfrontier2']").parent().hide();
 			// Hide main footer
@@ -734,7 +760,7 @@
 		storeStorageHelper();
 		takeStorageHelper();
 		replenishHungerHelper();
-		healHealthHelper();
+		restoreHealthHelper();
 		repairArmorHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
