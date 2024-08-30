@@ -62,6 +62,28 @@
 			.then((response) => (callback ? callback(response, callbackParams) : true));
 	}
 
+	function makeInventoryRequest(creditsNum, buyNum, renameTo, itemPrice, itemType1, itemType2, slot1, slot2, itemScrapValue, action, controller) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["templateID"] = "0";
+		requestParams["sc"] = userVars["sc"];
+		requestParams["creditsnum"] = creditsNum;
+		requestParams["buynum"] = buyNum;
+		requestParams["renameto"] = renameTo;
+		requestParams["expected_itemprice"] = itemPrice;
+		requestParams["expected_itemtype2"] = itemType2;
+		requestParams["expected_itemtype"] = itemType1;
+		requestParams["itemnum2"] = slot2;
+		requestParams["itemnum"] = slot1;
+		requestParams["price"] = itemScrapValue;
+		requestParams["action"] = action;
+		requestParams["gv"] = "21";
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
+	}
+
 	function makeScrapRequest(itemId, inventorySlot, itemScrapValue, controller) {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
@@ -69,6 +91,7 @@
 		requestParams["sc"] = userVars["sc"];
 		requestParams["creditsnum"] = "0";
 		requestParams["buynum"] = "0";
+		requestParams["renameto"] = "";
 		requestParams["expected_itemprice"] = "";
 		requestParams["expected_itemtype2"] = "";
 		requestParams["expected_itemtype"] = itemId; // item code/id
@@ -217,6 +240,34 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterServiceResponseText, null);
 	}
 
+	function requestHealServices() {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
+		requestParams["searchname"] = "";
+		requestParams["memID"] = "";
+		requestParams["searchtype"] = "buyinglist";
+		requestParams["profession"] = "Doctor";
+		requestParams["category"] = "";
+		requestParams["search"] = "services";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterServiceResponseText, null);
+	}
+
+	function requestItemTradeList(itemName) {
+		let requestParams = {};
+		requestParams["pagetime"] = userVars["pagetime"];
+		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
+		requestParams["searchname"] = encodeURI(itemName.substring(0, 15));
+		requestParams["memID"] = "";
+		requestParams["searchtype"] = "buyinglistitemname";
+		requestParams["profession"] = "";
+		requestParams["category"] = "";
+		requestParams["search"] = "trades";
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterItemTradeResponseText, null);
+	}
+
 	function filterServiceResponseText(response) {
 		let services = {};
 		var responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
@@ -248,6 +299,30 @@
 			}
 		}
 		return services;
+	}
+
+	function filterItemTradeResponseText(response) {
+		let trades = [];
+		let responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
+		if (response != "") {
+			for (var i = 0; i < responseLength; i++) {
+				var trade = {};
+				trade["tradeId"] = parseInt(
+					response
+						.match(new RegExp("tradelist_" + i + "_trade_id=[0-9]+&"))[0]
+						.split("=")[1]
+						.match(/[0-9]+/)[0]
+				);
+				trade["price"] = parseInt(
+					response
+						.match(new RegExp("tradelist_" + i + "_price=[0-9]+&"))[0]
+						.split("=")[1]
+						.match(/[0-9]+/)[0]
+				);
+				trades.push(trade);
+			}
+		}
+		return trades;
 	}
 
 	function updateStorage(storageData) {
@@ -291,7 +366,7 @@
 					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
 
 					for (const [index, value] of validItems.entries()) {
-						await makeScrapRequest(value.id, value.slot, value.scrapValue, controller)
+						await makeInventoryRequest("0", "0", "", "", value.id, "", value.slot, "", value.scrapValue, "scrap")
 							.then(() => unsafeWindow.playSound("shop_buysell"))
 							.then(() => {
 								if (index === validItems.length - 1) {
@@ -446,17 +521,117 @@
 		restoreHealthButton.innerHTML = "Restore";
 		restoreHealthButton.disabled = true;
 		healthElement.parentElement.appendChild(restoreHealthButton);
+
+		let playerCash = userVars["DFSTATS_df_cash"];
+		let inventorySlotNumber = unsafeWindow.findFirstEmptyGenericSlot("inv");
+		let usableMed = getUsableMed();
+		let adminsterMed = usableMed[1];
+		let medAdminsterLevel = usableMed[0]["level"] - 5;
+
+		if (parseInt(userVars["DFSTATS_df_hpcurrent"]) >= parseInt(userVars["DFSTATS_df_hpmax"])) {
+			throw "Health is full";
+		}
+		if (inventorySlotNumber === false) {
+			throw "Inventory is full";
+		}
+
+		let buyableMed = await requestItemTradeList(usableMed[0]["name"]);
+
+		if (buyableMed == null) {
+			throw `No ${usableMed[0]["name"]} trades available`;
+		}
+
+		let totalCost = buyableMed[0]["price"];
+
+		if (playerCash < totalCost) {
+			throw "You do not have enough cash";
+		}
+
+		let usableService = null;
+		if (adminsterMed) {
+			usableService = await requestHealServices();
+			if (usableService[medAdminsterLevel] == null) {
+				throw `No level ${medAdminsterLevel} doctor services available`;
+			}
+
+			totalCost += usableService[medAdminsterLevel][0]["price"];
+
+			if (playerCash < totalCost) {
+				throw "You do not have enough cash";
+			}
+		}
+
+		restoreHealthButton.disabled = false;
+		restoreHealthButton.addEventListener("click", () => {
+			openYesOrNoPrompt(
+				`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
+				async (e) => {
+					openLoadingPrompt("Restoring health...");
+				},
+				(e) => unsafeWindow.updateAllFields()
+			);
+		});
 	}
 
-	function getSuitableMedsList() {
+	function getSuitableMeds() {
+		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
 		const meds = Object.values(globalData).filter((value) => value["healthrestore"] > 0);
-		console.log(meds);
-		const suitableLevel = Math.min(...Object.values(meds).map((value) => value["level"]));
-		console.log(suitableLevel);
-		const suitableMeds = Object.values(meds)
-			.filter((value) => parseInt(value["level"]) <= parseInt(userVars["DFSTATS_df_level"]))
-			.filter((value) => parseInt(value["level"]) === parseInt(suitableLevel));
+		const suitableMeds = Object.values(meds).filter((value) => parseInt(value["level"]) <= playerLevel && value["code"] != "nerotonin5a");
+
+		suitableMeds.forEach((value, index, array) => {
+			let healthRestoreRaw = parseInt(value["healthrestore"]);
+			let healthRestoreDoc = healthRestoreRaw * 3;
+			let itemLevel = parseInt(value["level"]);
+			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
+				healthRestoreRaw = 3;
+				healthRestoreDoc = 9;
+			}
+			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
+				healthRestoreRaw = 0;
+				healthRestoreDoc = 1;
+			}
+			if (parseInt(value["needdoctor"]) == 0) {
+				healthRestoreDoc = 0;
+			}
+			array[index]["healthRestoreRaw"] = healthRestoreRaw;
+			array[index]["healthRestoreDoc"] = healthRestoreDoc;
+		});
+
 		return suitableMeds;
+	}
+
+	function getUsableMed() {
+		let playerHealthPercent = (userVars["DFSTATS_df_hpcurrent"] / userVars["DFSTATS_df_hpmax"]) * 100;
+		let suitableMeds = getSuitableMeds();
+		let optimalMed = null;
+		let adminsterMed = true;
+		let closestHealth = playerHealthPercent;
+
+		for (const value of suitableMeds) {
+			const healthRestoreRaw = parseInt(value["healthRestoreRaw"]);
+			const healthRestoreDoc = parseInt(value["healthRestoreDoc"]);
+
+			const totalHealthRaw = playerHealthPercent + healthRestoreRaw;
+			const totalHealthDoc = playerHealthPercent + healthRestoreDoc;
+
+			if (totalHealthRaw <= 100 && totalHealthRaw > closestHealth) {
+				optimalMed = value;
+				adminsterMed = false;
+				closestHealth = totalHealthRaw;
+			}
+
+			if (totalHealthDoc <= 100 && totalHealthDoc > closestHealth) {
+				optimalMed = value;
+				adminsterMed = true;
+				closestHealth = totalHealthDoc;
+			}
+		}
+
+		if (parseInt(optimalMed["needdoctor"]) == 0) {
+			adminsterMed = false;
+		}
+
+		return [optimalMed, adminsterMed];
 	}
 
 	async function repairArmorHelper() {
@@ -477,7 +652,7 @@
 		repairArmorButton.disabled = true;
 		armourElement.appendChild(repairArmorButton);
 
-		var playerCash = userVars["DFSTATS_df_cash"];
+		let playerCash = userVars["DFSTATS_df_cash"];
 		let playerArmour = userVars["DFSTATS_df_armourtype"];
 		let armourData = globalData[playerArmour.split("_")[0]];
 		let armourRepairLevel = armourData["shop_level"] - 5;
@@ -752,16 +927,16 @@
 	////////////////////////////
 	// INJECT SCRIPTS
 	////////////////////////////
-	setTimeout(() => {
+	setTimeout(async () => {
 		closePopupAds();
 		addOutpostQuickLinks();
 		modifyUserInterface();
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
-		replenishHungerHelper();
-		restoreHealthHelper();
-		repairArmorHelper();
+		await replenishHungerHelper();
+		await restoreHealthHelper();
+		await repairArmorHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
