@@ -94,46 +94,18 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
 	}
 
-	function requestRepairServices() {
+	function makeMarketSearchRequest(searchName, searchType, profession, search, callback) {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
 		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
-		requestParams["searchname"] = "";
+		requestParams["searchname"] = searchName;
 		requestParams["memID"] = "";
-		requestParams["searchtype"] = "buyinglist";
-		requestParams["profession"] = "Engineer";
+		requestParams["searchtype"] = searchType;
+		requestParams["profession"] = profession;
 		requestParams["category"] = "";
-		requestParams["search"] = "services";
+		requestParams["search"] = search;
 
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterServiceResponseText, null);
-	}
-
-	function requestHealServices() {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
-		requestParams["searchname"] = "";
-		requestParams["memID"] = "";
-		requestParams["searchtype"] = "buyinglist";
-		requestParams["profession"] = "Doctor";
-		requestParams["category"] = "";
-		requestParams["search"] = "services";
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterServiceResponseText, null);
-	}
-
-	function requestItemTradeList(itemName) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["tradezone"] = userVars["DFSTATS_df_tradezone"];
-		requestParams["searchname"] = encodeURI(itemName.substring(0, 15));
-		requestParams["memID"] = "";
-		requestParams["searchtype"] = "buyinglistitemname";
-		requestParams["profession"] = "";
-		requestParams["category"] = "";
-		requestParams["search"] = "trades";
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, filterItemTradeResponseText, null);
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/trade_search.php", requestParams, null, callback, null);
 	}
 
 	function filterServiceResponseText(response) {
@@ -407,13 +379,14 @@
 		}
 
 		let medAdminsterLevel = usableMed[0]["level"] - 5;
-		let buyableMed = await requestItemTradeList(usableMed[0]["name"]);
+		let availableMeds = await makeMarketSearchRequest(encodeURI(itemName.substring(0, 15)), buyinglistitemname, "", "trades", filterItemTradeResponseText);
+		let buyableMed = availableMeds[0];
 
-		if (buyableMed === undefined || buyableMed.length == 0) {
+		if (availableMeds === undefined || availableMeds.length == 0) {
 			throw `No ${usableMed[0]["name"]} trades available`;
 		}
 
-		let totalCost = buyableMed[0]["price"];
+		let totalCost = buyableMed["price"];
 
 		if (playerCash < totalCost) {
 			throw "You do not have enough cash";
@@ -421,7 +394,7 @@
 
 		let usableService = null;
 		if (adminsterMed) {
-			let availableServices = await requestHealServices();
+			let availableServices = await makeMarketSearchRequest("", "buyinglist", "Doctor", "services", filterServiceResponseText);
 			if (availableServices[medAdminsterLevel] == null) {
 				throw `No level ${medAdminsterLevel} doctor services available`;
 			}
@@ -441,7 +414,7 @@
 				`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 				async (e) => {
 					openLoadingPrompt("Restoring health...");
-					await makeInventoryRequest("undefined", buyableMed[0]["tradeId"], "undefined`undefined", `${buyableMed[0]["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+					await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
 					if (adminsterMed) {
 						await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
 					} else {
@@ -551,7 +524,7 @@
 			throw "Inventory is full";
 		}
 
-		await requestRepairServices().then((response) => {
+		await makeMarketSearchRequest("", "buyinglist", "Engineer", "services", filterServiceResponseText).then((response) => {
 			if (response[armourRepairLevel] == null) {
 				throw `No level ${armourRepairLevel} repair service available`;
 			}
@@ -688,6 +661,13 @@
 			// Hide main footer
 			$("body > table:nth-child(2) > tbody > tr > td > table").hide();
 			return;
+		}
+		// Fit everything to current window
+		if ($("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/header.jpg']") != null) {
+			$("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/header.jpg']").css("background-position", "0px -110px");
+			$("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/header.jpg']").parent().height(118);
+			$("td[style*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_margin.jpg']").css("background-position", "left -110px");
+			$("td[style*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/left_margin.jpg']").css("background-position", "right -110px");
 		}
 		// Hide facebook like button
 		$("iframe[src*='https://www.facebook.com/plugins/like.php?href=https://www.facebook.com/OfficialDeadFrontier/&width&layout=button_count&action=like&show_faces=false&share=true&height=35&appId=']").hide();
