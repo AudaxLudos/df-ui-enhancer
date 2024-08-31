@@ -84,72 +84,6 @@
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
 	}
 
-	function makeScrapRequest(itemId, inventorySlot, itemScrapValue, controller) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = "0";
-		requestParams["renameto"] = "";
-		requestParams["expected_itemprice"] = "";
-		requestParams["expected_itemtype2"] = "";
-		requestParams["expected_itemtype"] = itemId; // item code/id
-		requestParams["itemnum2"] = "";
-		requestParams["itemnum"] = inventorySlot; // inventory slot
-		requestParams["price"] = itemScrapValue; // item scrap price
-		requestParams["action"] = "scrap";
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
-	}
-
-	function makeStoreRequest(itemId, inventorySlot, itemScrapValue, controller) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = "0";
-		requestParams["renameto"] = "undefined`undefined";
-		requestParams["expected_itemprice"] = "-1";
-		requestParams["expected_itemtype2"] = "";
-		requestParams["expected_itemtype"] = itemId; // item code/id
-		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`; // storage slot
-		requestParams["itemnum"] = inventorySlot; // inventory slot
-		requestParams["price"] = itemScrapValue; // item scrap price
-		requestParams["action"] = "store";
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
-	}
-
-	function makeTakeRequest(itemId, storageSlot, itemScrapValue, controller) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = "0";
-		requestParams["renameto"] = "undefined`undefined";
-		requestParams["expected_itemprice"] = "-1";
-		requestParams["expected_itemtype2"] = "";
-		requestParams["expected_itemtype"] = itemId; // item code/id
-		requestParams["itemnum2"] = `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`; // inventory slot
-		requestParams["itemnum"] = storageSlot + 40; // storage slot
-		requestParams["price"] = itemScrapValue; // item scrap price
-		requestParams["action"] = "take";
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, controller, updateInventory, null);
-	}
-
 	function makeGetStorageRequest() {
 		let requestParams = {};
 		requestParams["pagetime"] = userVars["pagetime"];
@@ -158,72 +92,6 @@
 		requestParams["password"] = userVars["password"];
 
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
-	}
-
-	function makeUnequipArmourRequest(itemId, slot) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = "0";
-		requestParams["renameto"] = "undefined`undefined";
-		requestParams["expected_itemprice"] = "-1";
-		requestParams["expected_itemtype2"] = itemId; // equipping/swapping
-		requestParams["expected_itemtype"] = ""; // unequipping/swapping
-		requestParams["itemnum2"] = "34"; // inventory/equipment/storage slot
-		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
-		requestParams["price"] = unsafeWindow.getUpgradePrice();
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-		requestParams["action"] = "newequip";
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
-	}
-
-	function makeEquipArmourRequest(itemId, slot) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = "0";
-		requestParams["renameto"] = "undefined`undefined";
-		requestParams["expected_itemprice"] = "-1";
-		requestParams["expected_itemtype2"] = ""; // equipping/swapping
-		requestParams["expected_itemtype"] = itemId; // unequipping/swapping
-		requestParams["itemnum2"] = "34"; // inventory/equipment/storage slot
-		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
-		requestParams["price"] = unsafeWindow.getUpgradePrice();
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-		requestParams["action"] = "newequip";
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
-	}
-
-	function makeBuyServiceRequest(providerId, itemPrice, slot) {
-		let requestParams = {};
-		requestParams["pagetime"] = userVars["pagetime"];
-		requestParams["templateID"] = "0";
-		requestParams["sc"] = userVars["sc"];
-		requestParams["creditsnum"] = "0";
-		requestParams["buynum"] = providerId;
-		requestParams["renameto"] = "undefined`undefined";
-		requestParams["expected_itemprice"] = itemPrice;
-		requestParams["expected_itemtype2"] = ""; // equipping/swapping
-		requestParams["expected_itemtype"] = ""; // unequipping/swapping
-		requestParams["itemnum2"] = "0"; // inventory/equipment/storage slot
-		requestParams["itemnum"] = slot; // inventory/equipment/storage slot
-		requestParams["price"] = unsafeWindow.getUpgradePrice();
-		requestParams["gv"] = "21";
-		requestParams["userID"] = userVars["userID"];
-		requestParams["password"] = userVars["password"];
-		requestParams["action"] = "buyrepair";
-
-		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/inventory_new.php", requestParams, null, updateInventory, null);
 	}
 
 	function requestRepairServices() {
@@ -366,7 +234,7 @@
 					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
 
 					for (const [index, value] of validItems.entries()) {
-						await makeInventoryRequest("0", "0", "", "", value.id, "", value.slot, "", value.scrapValue, "scrap")
+						await makeInventoryRequest("0", "0", "", "", value.id, "", value.slot, "", value.scrapValue, "scrap", controller)
 							.then(() => unsafeWindow.playSound("shop_buysell"))
 							.then(() => {
 								if (index === validItems.length - 1) {
@@ -404,7 +272,7 @@
 			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
-				await makeStoreRequest(value.id, value.slot, value.scrapValue, controller)
+				await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", value.slot, `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`, value.scrapValue, "store", controller)
 					.then(() => unsafeWindow.playSound("swap"))
 					.then(() => makeGetStorageRequest())
 					.then(() => {
@@ -458,7 +326,7 @@
 			if (validItems.length > 0) openCancelPrompt("Taking storage items to inventory...", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
-				await makeTakeRequest(value.id, value.slot, value.scrapValue, controller)
+				await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", `${value.slot + 40}`, `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`, value.scrapValue, "take", controller)
 					.then(() => unsafeWindow.playSound("swap"))
 					.then(() => makeGetStorageRequest())
 					.then(() => {
@@ -513,7 +381,11 @@
 		}
 		let healthElement = document.getElementsByClassName("playerHealth")[0];
 		healthElement.style.top = "";
-		let restoreHealthButton = document.createElement("button");
+		let restoreHealthButton = document.getElementById("customRestoreHealthButton");
+		if (restoreHealthButton != null) {
+			restoreHealthButton.remove();
+		}
+		restoreHealthButton = document.createElement("button");
 		restoreHealthButton.id = "customRestoreHealthButton";
 		restoreHealthButton.classList.add("opElem");
 		restoreHealthButton.style.left = "43px";
@@ -523,10 +395,9 @@
 		healthElement.parentElement.appendChild(restoreHealthButton);
 
 		let playerCash = userVars["DFSTATS_df_cash"];
-		let inventorySlotNumber = unsafeWindow.findFirstEmptyGenericSlot("inv");
+		let inventorySlotNumber = unsafeWindow.findLastEmptyGenericSlot("inv");
 		let usableMed = getUsableMed();
 		let adminsterMed = usableMed[1];
-		let medAdminsterLevel = usableMed[0]["level"] - 5;
 
 		if (parseInt(userVars["DFSTATS_df_hpcurrent"]) >= parseInt(userVars["DFSTATS_df_hpmax"])) {
 			throw "Health is full";
@@ -535,9 +406,10 @@
 			throw "Inventory is full";
 		}
 
+		let medAdminsterLevel = usableMed[0]["level"] - 5;
 		let buyableMed = await requestItemTradeList(usableMed[0]["name"]);
 
-		if (buyableMed == null) {
+		if (buyableMed === undefined || buyableMed.length == 0) {
 			throw `No ${usableMed[0]["name"]} trades available`;
 		}
 
@@ -549,12 +421,14 @@
 
 		let usableService = null;
 		if (adminsterMed) {
-			usableService = await requestHealServices();
-			if (usableService[medAdminsterLevel] == null) {
+			let availableServices = await requestHealServices();
+			if (availableServices[medAdminsterLevel] == null) {
 				throw `No level ${medAdminsterLevel} doctor services available`;
 			}
 
-			totalCost += usableService[medAdminsterLevel][0]["price"];
+			usableService = availableServices[medAdminsterLevel][0];
+
+			totalCost += usableService["price"];
 
 			if (playerCash < totalCost) {
 				throw "You do not have enough cash";
@@ -567,6 +441,15 @@
 				`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 				async (e) => {
 					openLoadingPrompt("Restoring health...");
+					await makeInventoryRequest("undefined", buyableMed[0]["tradeId"], "undefined`undefined", `${buyableMed[0]["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+					if (adminsterMed) {
+						await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
+					} else {
+						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
+					}
+					await unsafeWindow.playSound("heal");
+					await restoreHealthHelper();
+					await unsafeWindow.updateAllFields();
 				},
 				(e) => unsafeWindow.updateAllFields()
 			);
@@ -604,7 +487,7 @@
 		let playerHealthPercent = (userVars["DFSTATS_df_hpcurrent"] / userVars["DFSTATS_df_hpmax"]) * 100;
 		let suitableMeds = getSuitableMeds();
 		let optimalMed = null;
-		let adminsterMed = true;
+		let adminsterMed = false;
 		let closestHealth = playerHealthPercent;
 
 		for (const value of suitableMeds) {
@@ -627,7 +510,7 @@
 			}
 		}
 
-		if (parseInt(optimalMed["needdoctor"]) == 0) {
+		if (optimalMed != null && parseInt(optimalMed["needdoctor"]) == 0) {
 			adminsterMed = false;
 		}
 
@@ -685,10 +568,10 @@
 					`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">${formatCurrency(serviceData["price"])}</span>?`,
 					async (e) => {
 						openLoadingPrompt("Repairing armour...");
-						await makeUnequipArmourRequest(userVars["DFSTATS_df_armourtype"], inventorySlotNumber)
-							.then(() => makeBuyServiceRequest(serviceData["userId"], serviceData["price"], inventorySlotNumber))
+						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", userVars["DFSTATS_df_armourtype"], inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null)
+							.then(() => makeInventoryRequest("0", serviceData["userId"], "undefined`undefined", serviceData["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyrepair", null))
 							.then(() => unsafeWindow.playSound("repair"))
-							.then(() => makeEquipArmourRequest(playerArmour, inventorySlotNumber))
+							.then(() => makeInventoryRequest("0", "0", "undefined`undefined", "-1", userVars["DFSTATS_df_armourtype"], "", inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null))
 							.then(() => {
 								repairArmorHelper();
 								unsafeWindow.updateAllFields();
@@ -927,20 +810,21 @@
 	////////////////////////////
 	// INJECT SCRIPTS
 	////////////////////////////
-	setTimeout(async () => {
+	setTimeout(() => {
 		closePopupAds();
 		addOutpostQuickLinks();
 		modifyUserInterface();
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
-		await replenishHungerHelper();
-		await restoreHealthHelper();
-		await repairArmorHelper();
 
 		if (unsafeWindow.inventoryHolder != null) {
 			addQuickMarketSearchListener();
 			addClearSearchOnCategoryClickListener();
 		}
+
+		replenishHungerHelper();
+		restoreHealthHelper();
+		repairArmorHelper();
 	}, 500);
 })();
