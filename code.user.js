@@ -18,7 +18,6 @@
 
 	let globalData = unsafeWindow.globalData;
 	let userVars = unsafeWindow.userVars;
-	let tradeData = {};
 
 	////////////////////////////
 	// UTILITY FUNCTIONS
@@ -59,7 +58,12 @@
 			signal: controller ? controller.signal : null,
 		})
 			.then((response) => response.text())
-			.then((response) => (callback ? callback(response, callbackParams) : true));
+			.then((response) => {
+				if (!response) {
+					throw "Connection Error";
+				}
+				return callback ? callback(response, callbackParams) : true;
+			});
 	}
 
 	function makeInventoryRequest(creditsNum, buyNum, renameTo, itemPrice, itemType1, itemType2, slot1, slot2, itemScrapValue, action, controller) {
@@ -153,6 +157,10 @@
 						.split("=")[1]
 						.match(/[0-9]+/)[0]
 				);
+				trade["itemId"] = response
+					.match(new RegExp("tradelist_" + i + "_item=[a-zA-Z0-9_]+&"))[0]
+					.split("=")[1]
+					.match(/[a-zA-Z0-9_]+/)[0];
 				trade["price"] = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_price=[0-9]+&"))[0]
@@ -317,34 +325,128 @@
 		});
 	}
 
-	function replenishHungerHelper() {
+	async function replenishHungerHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
 		let hungerElement = document.getElementsByClassName("playerNourishment")[0];
 		hungerElement.style.top = "";
-		let replenishHungerButton = document.createElement("button");
+		let replenishHungerButton = document.getElementById("customReplenishHungerButton");
+		if (replenishHungerButton != null) {
+			replenishHungerButton.remove();
+		}
+		replenishHungerButton = document.createElement("button");
 		replenishHungerButton.id = "customReplenishHungerButton";
 		replenishHungerButton.classList.add("opElem");
 		replenishHungerButton.style.left = "37px";
 		replenishHungerButton.style.top = "25px";
 		replenishHungerButton.innerHTML = "Replenish";
+		replenishHungerButton.disabled = true;
 		hungerElement.parentElement.appendChild(replenishHungerButton);
 
-		// on element enter fetch trade data
-		// do not refetch data unless reload or a few seconds/minutes has passed
-		// on button click start replenishing process
-		// find appropriate food to replenish nourishment
-		// calculate if food needs to be cooked or not
-		//
+		let playerCash = userVars["DFSTATS_df_cash"];
+		let inventorySlotNumber = unsafeWindow.findLastEmptyGenericSlot("inv");
+		let usableFood = getUsableFood();
+		let cookFood = usableFood[1];
+
+		if (parseInt(userVars["DFSTATS_df_hungerhp"]) >= 100) {
+			throw "Nourishment is full";
+		}
+		if (inventorySlotNumber === false) {
+			throw "Inventory is full";
+		}
+
+		let availableFoods = await makeMarketSearchRequest(encodeURI(usableFood[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
+		if (cookFood) {
+			availableFoods = availableFoods.filter((value) => value["itemId"].includes("cooked"));
+		}
+
+		if (availableFoods === undefined || availableFoods.length == 0) {
+			throw `No ${usableFood[0]["name"]} trades available`;
+		}
+
+		let buyableFood = availableFoods[0];
+
+		if (playerCash < buyableFood["price"]) {
+			throw "You do not have enough cash";
+		}
+
+		replenishHungerButton.disabled = false;
+		replenishHungerButton.addEventListener("click", () => {
+			openYesOrNoPrompt(
+				`Are you sure you want to buy and use <span style="color: red;">${cookFood ? "Cooked " : " "}${usableFood[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(buyableFood["price"])}</span>?`,
+				async (e) => {
+					openLoadingPrompt("Replenishing nourishment...");
+					await makeInventoryRequest("undefined", buyableFood["tradeId"], "undefined`undefined", `${buyableFood["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", usableFood[0]["code"], inventorySlotNumber, "", 0, "newconsume", null);
+					await unsafeWindow.playSound("eat");
+					await restoreHealthHelper();
+					await unsafeWindow.updateAllFields();
+				},
+				(e) => unsafeWindow.updateAllFields()
+			);
+		});
 	}
 
-	function getFoodList() {
-		let foods = Object.values(globalData).filter((value) => {
-			return value["foodrestore"] > 0;
+	function getSuitableFoods() {
+		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
+		const foods = Object.values(globalData).filter((value) => value["foodrestore"] > 0);
+		const suitableFoods = Object.values(foods).filter((value) => parseInt(value["level"]) <= playerLevel && parseInt(value["noloot"]) != 1 && value["code"] != "mre");
+
+		suitableFoods.forEach((value, index, array) => {
+			let foodRestoreRaw = parseInt(value["foodrestore"]);
+			let foodRestoreCook = foodRestoreRaw * 3;
+			let itemLevel = parseInt(value["level"]);
+			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
+				foodRestoreRaw = 3;
+				foodRestoreCook = 9;
+			}
+			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
+				foodRestoreRaw = 0;
+				foodRestoreCook = 1;
+			}
+			if (parseInt(value["needcook"]) == 0) {
+				foodRestoreCook = 0;
+			}
+			array[index]["foodRestoreRaw"] = foodRestoreRaw;
+			array[index]["foodRestoreCook"] = foodRestoreCook;
 		});
-		// add raw food restore to every food
-		// add cooked food restore to every food
+
+		return suitableFoods;
+	}
+
+	function getUsableFood() {
+		let playerHungerPercent = parseInt(userVars["DFSTATS_df_hungerhp"]);
+		let suitableFoods = getSuitableFoods();
+		let optimalFood = null;
+		let cookFood = false;
+		let closestHunger = playerHungerPercent;
+
+		for (const value of suitableFoods) {
+			const foodRestoreRaw = parseInt(value["foodRestoreRaw"]);
+			const foodRestoreCook = parseInt(value["foodRestoreCook"]);
+
+			const totalFoodRaw = playerHungerPercent + foodRestoreRaw;
+			const totalFoodCook = playerHungerPercent + foodRestoreCook;
+
+			if (totalFoodRaw <= 100 && totalFoodRaw > closestHunger) {
+				optimalFood = value;
+				cookFood = false;
+				closestHunger = totalFoodRaw;
+			}
+
+			if (totalFoodCook <= 100 && totalFoodCook > closestHunger) {
+				optimalFood = value;
+				cookFood = true;
+				closestHunger = totalFoodCook;
+			}
+		}
+
+		if (optimalFood != null && parseInt(optimalFood["needcook"]) == 0) {
+			cookFood = false;
+		}
+
+		return [optimalFood, cookFood];
 	}
 
 	async function restoreHealthHelper() {
@@ -379,13 +481,13 @@
 		}
 
 		let medAdminsterLevel = usableMed[0]["level"] - 5;
-		let availableMeds = await makeMarketSearchRequest(encodeURI(itemName.substring(0, 15)), buyinglistitemname, "", "trades", filterItemTradeResponseText);
-		let buyableMed = availableMeds[0];
+		let availableMeds = await makeMarketSearchRequest(encodeURI(usableMed[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
 
 		if (availableMeds === undefined || availableMeds.length == 0) {
 			throw `No ${usableMed[0]["name"]} trades available`;
 		}
 
+		let buyableMed = availableMeds[0];
 		let totalCost = buyableMed["price"];
 
 		if (playerCash < totalCost) {
