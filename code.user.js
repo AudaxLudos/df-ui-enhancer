@@ -18,6 +18,8 @@
 
 	let globalData = unsafeWindow.globalData;
 	let userVars = unsafeWindow.userVars;
+	let requestPool = [];
+	let itemTradeData = {};
 
 	////////////////////////////
 	// UTILITY FUNCTIONS
@@ -33,6 +35,21 @@
 			minimumFractionDigits: 0,
 			maximumFractionDigits: 0,
 		}).format(number);
+	}
+
+	function formatOrdinalNum(i) {
+		let j = i % 10,
+			k = i % 100;
+		if (j === 1 && k !== 11) {
+			return i + "st";
+		}
+		if (j === 2 && k !== 12) {
+			return i + "nd";
+		}
+		if (j === 3 && k !== 13) {
+			return i + "rd";
+		}
+		return i + "th";
 	}
 
 	function serializeObject(obj) {
@@ -742,6 +759,82 @@
 		}
 	}
 
+	function marketItemPriceHelper() {
+		if (unsafeWindow.inventoryHolder == null) {
+			return;
+		}
+		var origInfoCard = unsafeWindow.infoCard || null;
+		if (origInfoCard) {
+			unsafeWindow.infoCard = async function (e) {
+				origInfoCard(e);
+				if (active || pageLock || !allowedInfoCard(e.target)) {
+					return;
+				}
+
+				let target;
+				if (e.target.parentNode.classList.contains("fakeItem")) {
+					target = e.target.parentNode;
+				} else {
+					target = e.target;
+				}
+
+				if (!target.classList.contains("item") && !target.classList.contains("fakeItem")) {
+					return;
+				}
+
+				const item = target.dataset.type?.split("_")[0] || null;
+				const quantity = target.dataset.quantity || 1;
+				if (!item) {
+					return;
+				}
+
+				let customMarketInfo = document.getElementById("customMarketInfo");
+				if (customMarketInfo) {
+					customMarketInfo.remove();
+				}
+				customMarketInfo = document.createElement("div");
+				customMarketInfo.id = "customMarketInfo";
+				customMarketInfo.classList.add("itemData");
+
+				let scrapInfo = document.createElement("div");
+				scrapInfo.innerHTML = `
+					Scrap Value: ${unsafeWindow.scrapValue(item, quantity)}
+				`;
+				customMarketInfo.append(scrapInfo);
+
+				if (globalData[item]["no_transfer"] == null || globalData[item]["no_transfer"] == "0") {
+					let tradeList = itemTradeData[item];
+					if (!tradeList) {
+						if (!requestPool.includes(item)) {
+							requestPool.push(item);
+							tradeList = await makeMarketSearchRequest(encodeURI(globalData[item]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
+							tradeList = await tradeList.filter((value) => value["itemId"].split("_")[0] == item);
+							requestPool = await requestPool.filter((value) => value != item);
+							itemTradeData[item] = tradeList;
+						} else {
+							throw "An item request is in progress";
+						}
+					}
+
+					if (tradeList && tradeList.length > 0) {
+						let length = tradeList.length <= 4 ? tradeList.length : 4;
+						for (let i = 0; i < length; i++) {
+							const data = tradeList[i];
+							let tradeInfo = document.createElement("div");
+							tradeInfo.innerHTML = `
+							${formatOrdinalNum(i + 1)} Trade: ${formatCurrency(data["price"])}
+						`;
+							customMarketInfo.appendChild(tradeInfo);
+						}
+					}
+				}
+
+				document.getElementById("infoBox").append(customMarketInfo);
+			}.bind(unsafeWindow);
+			inventoryHolder.addEventListener("mouseover", unsafeWindow.infoCard, false);
+		}
+	}
+
 	function modifyUserInterface() {
 		if (unsafeWindow.jQuery == null) {
 			return;
@@ -905,6 +998,7 @@
 			addClearSearchOnCategoryClickListener();
 		}
 
+		marketItemPriceHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
 		repairArmorHelper();
