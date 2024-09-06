@@ -203,6 +203,128 @@
 		unsafeWindow.updateAllFieldsBase();
 	}
 
+	function getSuitableFoods() {
+		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
+		const foods = Object.values(globalData).filter((value) => value["foodrestore"] > 0);
+		const suitableFoods = Object.values(foods).filter((value) => parseInt(value["level"]) <= playerLevel && parseInt(value["noloot"]) != 1 && value["code"] != "mre");
+
+		suitableFoods.forEach((value, index, array) => {
+			let foodRestoreRaw = parseInt(value["foodrestore"]);
+			let foodRestoreCook = foodRestoreRaw * 3;
+			let itemLevel = parseInt(value["level"]);
+			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
+				foodRestoreRaw = 3;
+				foodRestoreCook = 9;
+			}
+			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
+				foodRestoreRaw = 0;
+				foodRestoreCook = 1;
+			}
+			if (parseInt(value["needcook"]) == 0) {
+				foodRestoreCook = 0;
+			}
+			array[index]["foodRestoreRaw"] = foodRestoreRaw;
+			array[index]["foodRestoreCook"] = foodRestoreCook;
+		});
+
+		return suitableFoods;
+	}
+
+	function getUsableFood() {
+		let playerHungerPercent = parseInt(userVars["DFSTATS_df_hungerhp"]);
+		let suitableFoods = getSuitableFoods();
+		let optimalFood = null;
+		let cookFood = false;
+		let closestHunger = playerHungerPercent;
+
+		for (const value of suitableFoods) {
+			const foodRestoreRaw = parseInt(value["foodRestoreRaw"]);
+			const foodRestoreCook = parseInt(value["foodRestoreCook"]);
+
+			const totalFoodRaw = playerHungerPercent + foodRestoreRaw;
+			const totalFoodCook = playerHungerPercent + foodRestoreCook;
+
+			if (totalFoodRaw <= 100 && totalFoodRaw > closestHunger) {
+				optimalFood = value;
+				cookFood = false;
+				closestHunger = totalFoodRaw;
+			}
+
+			if (totalFoodCook <= 100 && totalFoodCook > closestHunger) {
+				optimalFood = value;
+				cookFood = true;
+				closestHunger = totalFoodCook;
+			}
+		}
+
+		if (optimalFood != null && parseInt(optimalFood["needcook"]) == 0) {
+			cookFood = false;
+		}
+
+		return [optimalFood, cookFood];
+	}
+
+	function getSuitableMeds() {
+		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
+		const meds = Object.values(globalData).filter((value) => value["healthrestore"] > 0);
+		const suitableMeds = Object.values(meds).filter((value) => parseInt(value["level"]) <= playerLevel && value["code"] != "nerotonin5a");
+
+		suitableMeds.forEach((value, index, array) => {
+			let healthRestoreRaw = parseInt(value["healthrestore"]);
+			let healthRestoreDoc = healthRestoreRaw * 3;
+			let itemLevel = parseInt(value["level"]);
+			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
+				healthRestoreRaw = 3;
+				healthRestoreDoc = 9;
+			}
+			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
+				healthRestoreRaw = 0;
+				healthRestoreDoc = 1;
+			}
+			if (parseInt(value["needdoctor"]) == 0) {
+				healthRestoreDoc = 0;
+			}
+			array[index]["healthRestoreRaw"] = healthRestoreRaw;
+			array[index]["healthRestoreDoc"] = healthRestoreDoc;
+		});
+
+		return suitableMeds;
+	}
+
+	function getUsableMed() {
+		let playerHealthPercent = (userVars["DFSTATS_df_hpcurrent"] / userVars["DFSTATS_df_hpmax"]) * 100;
+		let suitableMeds = getSuitableMeds();
+		let optimalMed = null;
+		let adminsterMed = false;
+		let closestHealth = playerHealthPercent;
+
+		for (const value of suitableMeds) {
+			const healthRestoreRaw = parseInt(value["healthRestoreRaw"]);
+			const healthRestoreDoc = parseInt(value["healthRestoreDoc"]);
+
+			const totalHealthRaw = playerHealthPercent + healthRestoreRaw;
+			const totalHealthDoc = playerHealthPercent + healthRestoreDoc;
+
+			if (totalHealthRaw <= 100 && totalHealthRaw > closestHealth) {
+				optimalMed = value;
+				adminsterMed = false;
+				closestHealth = totalHealthRaw;
+			}
+
+			if (totalHealthDoc <= 100 && totalHealthDoc > closestHealth) {
+				optimalMed = value;
+				adminsterMed = true;
+				closestHealth = totalHealthDoc;
+			}
+		}
+
+		if (optimalMed != null && parseInt(optimalMed["needdoctor"]) == 0) {
+			adminsterMed = false;
+		}
+
+		return [optimalMed, adminsterMed];
+	}
+
 	////////////////////////////
 	// UI ENCHANCERS
 	////////////////////////////
@@ -348,12 +470,12 @@
 		}
 		let hungerElement = document.getElementsByClassName("playerNourishment")[0];
 		hungerElement.style.top = "";
-		let replenishHungerButton = document.getElementById("customReplenishHungerButton");
+		let replenishHungerButton = document.getElementById("replenishHungerButton");
 		if (replenishHungerButton != null) {
 			replenishHungerButton.remove();
 		}
 		replenishHungerButton = document.createElement("button");
-		replenishHungerButton.id = "customReplenishHungerButton";
+		replenishHungerButton.id = "replenishHungerButton";
 		replenishHungerButton.classList.add("opElem");
 		replenishHungerButton.style.left = "37px";
 		replenishHungerButton.style.top = "25px";
@@ -395,11 +517,16 @@
 					`Are you sure you want to buy and use <span style="color: red;">${cookFood ? "Cooked " : " "}${usableFood[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(buyableFood["price"])}</span>?`,
 					async (e) => {
 						openLoadingPrompt("Replenishing nourishment...");
-						await makeInventoryRequest("undefined", buyableFood["tradeId"], "undefined`undefined", `${buyableFood["price"]}`, "", "", "0", "0", "0", "newbuy", null);
-						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", usableFood[0]["code"], inventorySlotNumber, "", 0, "newconsume", null);
-						await unsafeWindow.playSound("eat");
-						await restoreHealthHelper();
-						await unsafeWindow.updateAllFields();
+						try {
+							await makeInventoryRequest("undefined", buyableFood["tradeId"], "undefined`undefined", `${buyableFood["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+							await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", usableFood[0]["code"], inventorySlotNumber, "", 0, "newconsume", null);
+							unsafeWindow.playSound("eat");
+							replenishHungerHelper();
+							unsafeWindow.updateAllFields();
+						} catch (error) {
+							replenishHungerHelper();
+							unsafeWindow.updateAllFields();
+						}
 					},
 					(e) => unsafeWindow.updateAllFields()
 				);
@@ -412,79 +539,18 @@
 		}
 	}
 
-	function getSuitableFoods() {
-		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
-		const foods = Object.values(globalData).filter((value) => value["foodrestore"] > 0);
-		const suitableFoods = Object.values(foods).filter((value) => parseInt(value["level"]) <= playerLevel && parseInt(value["noloot"]) != 1 && value["code"] != "mre");
-
-		suitableFoods.forEach((value, index, array) => {
-			let foodRestoreRaw = parseInt(value["foodrestore"]);
-			let foodRestoreCook = foodRestoreRaw * 3;
-			let itemLevel = parseInt(value["level"]);
-			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
-				foodRestoreRaw = 3;
-				foodRestoreCook = 9;
-			}
-			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
-				foodRestoreRaw = 0;
-				foodRestoreCook = 1;
-			}
-			if (parseInt(value["needcook"]) == 0) {
-				foodRestoreCook = 0;
-			}
-			array[index]["foodRestoreRaw"] = foodRestoreRaw;
-			array[index]["foodRestoreCook"] = foodRestoreCook;
-		});
-
-		return suitableFoods;
-	}
-
-	function getUsableFood() {
-		let playerHungerPercent = parseInt(userVars["DFSTATS_df_hungerhp"]);
-		let suitableFoods = getSuitableFoods();
-		let optimalFood = null;
-		let cookFood = false;
-		let closestHunger = playerHungerPercent;
-
-		for (const value of suitableFoods) {
-			const foodRestoreRaw = parseInt(value["foodRestoreRaw"]);
-			const foodRestoreCook = parseInt(value["foodRestoreCook"]);
-
-			const totalFoodRaw = playerHungerPercent + foodRestoreRaw;
-			const totalFoodCook = playerHungerPercent + foodRestoreCook;
-
-			if (totalFoodRaw <= 100 && totalFoodRaw > closestHunger) {
-				optimalFood = value;
-				cookFood = false;
-				closestHunger = totalFoodRaw;
-			}
-
-			if (totalFoodCook <= 100 && totalFoodCook > closestHunger) {
-				optimalFood = value;
-				cookFood = true;
-				closestHunger = totalFoodCook;
-			}
-		}
-
-		if (optimalFood != null && parseInt(optimalFood["needcook"]) == 0) {
-			cookFood = false;
-		}
-
-		return [optimalFood, cookFood];
-	}
-
 	async function restoreHealthHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
 		let healthElement = document.getElementsByClassName("playerHealth")[0];
 		healthElement.style.top = "";
-		let restoreHealthButton = document.getElementById("customRestoreHealthButton");
+		let restoreHealthButton = document.getElementById("restoreHealthButton");
 		if (restoreHealthButton != null) {
 			restoreHealthButton.remove();
 		}
 		restoreHealthButton = document.createElement("button");
-		restoreHealthButton.id = "customRestoreHealthButton";
+		restoreHealthButton.id = "restoreHealthButton";
 		restoreHealthButton.classList.add("opElem");
 		restoreHealthButton.style.left = "43px";
 		restoreHealthButton.style.top = "25px";
@@ -541,15 +607,20 @@
 					`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 					async (e) => {
 						openLoadingPrompt("Restoring health...");
-						await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
-						if (adminsterMed) {
-							await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
-						} else {
-							await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
+						try {
+							await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+							if (adminsterMed) {
+								await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
+							} else {
+								await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
+							}
+							unsafeWindow.playSound("heal");
+							restoreHealthHelper();
+							unsafeWindow.updateAllFields();
+						} catch (error) {
+							restoreHealthHelper();
+							unsafeWindow.updateAllFields();
 						}
-						await unsafeWindow.playSound("heal");
-						await restoreHealthHelper();
-						await unsafeWindow.updateAllFields();
 					},
 					(e) => unsafeWindow.updateAllFields()
 				);
@@ -562,84 +633,23 @@
 		}
 	}
 
-	function getSuitableMeds() {
-		let playerLevel = parseInt(userVars["DFSTATS_df_level"]);
-		const meds = Object.values(globalData).filter((value) => value["healthrestore"] > 0);
-		const suitableMeds = Object.values(meds).filter((value) => parseInt(value["level"]) <= playerLevel && value["code"] != "nerotonin5a");
-
-		suitableMeds.forEach((value, index, array) => {
-			let healthRestoreRaw = parseInt(value["healthrestore"]);
-			let healthRestoreDoc = healthRestoreRaw * 3;
-			let itemLevel = parseInt(value["level"]);
-			if ((playerLevel > itemLevel && itemLevel < 50) || (playerLevel > 70 && itemLevel === 50)) {
-				healthRestoreRaw = 3;
-				healthRestoreDoc = 9;
-			}
-			if ((playerLevel > itemLevel + 10 && itemLevel < 40) || (playerLevel > 70 && itemLevel === 40)) {
-				healthRestoreRaw = 0;
-				healthRestoreDoc = 1;
-			}
-			if (parseInt(value["needdoctor"]) == 0) {
-				healthRestoreDoc = 0;
-			}
-			array[index]["healthRestoreRaw"] = healthRestoreRaw;
-			array[index]["healthRestoreDoc"] = healthRestoreDoc;
-		});
-
-		return suitableMeds;
-	}
-
-	function getUsableMed() {
-		let playerHealthPercent = (userVars["DFSTATS_df_hpcurrent"] / userVars["DFSTATS_df_hpmax"]) * 100;
-		let suitableMeds = getSuitableMeds();
-		let optimalMed = null;
-		let adminsterMed = false;
-		let closestHealth = playerHealthPercent;
-
-		for (const value of suitableMeds) {
-			const healthRestoreRaw = parseInt(value["healthRestoreRaw"]);
-			const healthRestoreDoc = parseInt(value["healthRestoreDoc"]);
-
-			const totalHealthRaw = playerHealthPercent + healthRestoreRaw;
-			const totalHealthDoc = playerHealthPercent + healthRestoreDoc;
-
-			if (totalHealthRaw <= 100 && totalHealthRaw > closestHealth) {
-				optimalMed = value;
-				adminsterMed = false;
-				closestHealth = totalHealthRaw;
-			}
-
-			if (totalHealthDoc <= 100 && totalHealthDoc > closestHealth) {
-				optimalMed = value;
-				adminsterMed = true;
-				closestHealth = totalHealthDoc;
-			}
-		}
-
-		if (optimalMed != null && parseInt(optimalMed["needdoctor"]) == 0) {
-			adminsterMed = false;
-		}
-
-		return [optimalMed, adminsterMed];
-	}
-
 	async function repairArmorHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
 		}
 		let armourElement = document.getElementById("sidebarArmour");
-		let repairArmorButton = document.getElementById("customRepairArmorButton");
-		if (repairArmorButton != null) {
-			repairArmorButton.remove();
+		let repairArmourButton = document.getElementById("repairArmourButton");
+		if (repairArmourButton != null) {
+			repairArmourButton.remove();
 		}
-		repairArmorButton = document.createElement("button");
-		repairArmorButton.id = "customRepairArmorButton";
-		repairArmorButton.classList.add("opElem");
-		repairArmorButton.style.left = "46px";
-		repairArmorButton.style.top = "29px";
-		repairArmorButton.textContent = "Repair";
-		repairArmorButton.disabled = true;
-		armourElement.appendChild(repairArmorButton);
+		repairArmourButton = document.createElement("button");
+		repairArmourButton.id = "repairArmourButton";
+		repairArmourButton.classList.add("opElem");
+		repairArmourButton.style.left = "46px";
+		repairArmourButton.style.top = "29px";
+		repairArmourButton.textContent = "Repair";
+		repairArmourButton.disabled = true;
+		armourElement.appendChild(repairArmourButton);
 
 		let playerCash = userVars["DFSTATS_df_cash"];
 		let playerArmour = userVars["DFSTATS_df_armourtype"];
@@ -669,33 +679,31 @@
 					throw "You do not have enough cash";
 				}
 
-				repairArmorButton.disabled = false;
-				repairArmorButton.addEventListener("click", () => {
+				repairArmourButton.disabled = false;
+				repairArmourButton.addEventListener("click", () => {
 					openYesOrNoPrompt(
 						`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">${formatCurrency(serviceData["price"])}</span>?`,
 						async (e) => {
 							openLoadingPrompt("Repairing armour...");
-							await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", userVars["DFSTATS_df_armourtype"], inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null)
-								.then(() => makeInventoryRequest("0", serviceData["userId"], "undefined`undefined", serviceData["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyrepair", null))
-								.then(() => unsafeWindow.playSound("repair"))
-								.then(() => makeInventoryRequest("0", "0", "undefined`undefined", "-1", userVars["DFSTATS_df_armourtype"], "", inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null))
-								.then(() => {
-									repairArmorHelper();
-									unsafeWindow.updateAllFields();
-								})
-								.catch((error) => {
-									repairArmorHelper();
-									unsafeWindow.updateAllFields();
-									throw error;
-								});
+							try {
+								await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", userVars["DFSTATS_df_armourtype"], inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null);
+								await makeInventoryRequest("0", serviceData["userId"], "undefined`undefined", serviceData["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyrepair", null);
+								unsafeWindow.playSound("repair");
+								await makeInventoryRequest("0", "0", "undefined`undefined", "-1", userVars["DFSTATS_df_armourtype"], "", inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null);
+								repairArmorHelper();
+								unsafeWindow.updateAllFields();
+							} catch (error) {
+								repairArmorHelper();
+								unsafeWindow.updateAllFields();
+							}
 						},
 						(e) => unsafeWindow.updateAllFields()
 					);
 				});
 			});
 		} catch (error) {
-			repairArmorButton.disabled = false;
-			repairArmorButton.addEventListener("click", () => {
+			repairArmourButton.disabled = false;
+			repairArmourButton.addEventListener("click", () => {
 				openPromptWithButton(error, "Close", (e) => unsafeWindow.updateAllFields());
 			});
 		}
@@ -837,7 +845,7 @@
 
 				let scrapInfo = document.createElement("div");
 				scrapInfo.innerHTML = `
-					Scrap Value: ${unsafeWindow.scrapValue(item, quantity)}
+					Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(item, quantity))}
 				`;
 				customMarketInfo.append(scrapInfo);
 
@@ -977,11 +985,13 @@
 	}
 
 	function addQuickMarketSearchListener() {
+		if (unsafeWindow.inventoryHolder == null) {
+			return;
+		}
+		if (unsafeWindow.marketHolder == null) {
+			return;
+		}
 		inventoryHolder.addEventListener("dblclick", (event) => {
-			if (unsafeWindow.marketHolder == null) {
-				return;
-			}
-
 			const searchField = document.getElementById("searchField");
 			const searchButton = document.getElementById("makeSearch");
 			const searchCategory = document.getElementById("categoryChoice");
@@ -1004,11 +1014,13 @@
 	}
 
 	function addClearSearchOnCategoryClickListener() {
-		inventoryHolder.addEventListener("click", (event) => {
-			if (unsafeWindow.marketHolder == null) {
-				return;
-			}
-
+		if (unsafeWindow.inventoryHolder == null) {
+			return;
+		}
+		if (unsafeWindow.marketHolder == null) {
+			return;
+		}
+		unsafeWindow.inventoryHolder.addEventListener("click", (event) => {
 			const searchField = document.getElementById("searchField");
 
 			if (searchField == null) {
@@ -1022,7 +1034,7 @@
 	}
 
 	////////////////////////////
-	// INJECT SCRIPTS
+	// SCRIPT INJECTION
 	////////////////////////////
 	setTimeout(() => {
 		closePopupAds();
@@ -1031,12 +1043,8 @@
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
-
-		if (unsafeWindow.inventoryHolder != null) {
-			addQuickMarketSearchListener();
-			addClearSearchOnCategoryClickListener();
-		}
-
+		addQuickMarketSearchListener();
+		addClearSearchOnCategoryClickListener();
 		marketItemPriceHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
