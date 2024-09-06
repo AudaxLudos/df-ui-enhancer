@@ -353,18 +353,16 @@
 					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
 
 					for (const [index, value] of validItems.entries()) {
-						await makeInventoryRequest("0", "0", "", "", value.id, "", value.slot, "", value.scrapValue, "scrap", controller)
-							.then(() => unsafeWindow.playSound("shop_buysell"))
-							.then(() => {
-								if (index === validItems.length - 1) {
-									unsafeWindow.updateAllFields();
-								}
-							})
-							.then(() => sleep(Math.random() * (300 - 50) + 50))
-							.catch((error) => {
+						try {
+							await sleep(Math.random() * (300 - 50) + 50);
+							await makeInventoryRequest("0", "0", "", "", value.id, "", value.slot, "", value.scrapValue, "scrap", controller);
+							unsafeWindow.playSound("shop_buysell");
+							if (index === validItems.length - 1) {
 								unsafeWindow.updateAllFields();
-								throw error;
-							});
+							}
+						} catch (error) {
+							unsafeWindow.updateAllFields();
+						}
 					}
 				},
 				(e) => unsafeWindow.updateAllFields()
@@ -391,22 +389,19 @@
 			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
-				await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", value.slot, `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`, value.scrapValue, "store", controller)
-					.then(() => unsafeWindow.playSound("swap"))
-					.then(() => makeGetStorageRequest())
-					.then(() => {
-						if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
-							throw "Storage is full";
-						} else if (index === validItems.length - 1) {
-							unsafeWindow.updateAllFields();
-							throw "Inventory is empty";
-						}
-					})
-					.then(() => sleep(Math.random() * (50 - 0) + 0))
-					.catch((error) => {
+				try {
+					await sleep(Math.random() * (50 - 0) + 0);
+					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", value.slot, `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`, value.scrapValue, "store", controller);
+					await makeGetStorageRequest();
+					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
+						throw "Storage is full";
+					} else if (index === validItems.length - 1) {
 						unsafeWindow.updateAllFields();
-						throw error;
-					});
+						throw "Inventory is empty";
+					}
+				} catch (error) {
+					unsafeWindow.updateAllFields();
+				}
 			}
 		});
 	}
@@ -445,21 +440,19 @@
 			if (validItems.length > 0) openCancelPrompt("Taking storage items to inventory...", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
-				await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", `${value.slot + 40}`, `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`, value.scrapValue, "take", controller)
-					.then(() => unsafeWindow.playSound("swap"))
-					.then(() => makeGetStorageRequest())
-					.then(() => {
-						if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
-							throw "Inventory is full";
-						} else if (index === validItems.length - 1) {
-							unsafeWindow.updateAllFields();
-						}
-					})
-					.then(() => sleep(Math.random() * (50 - 0) + 0))
-					.catch((error) => {
+				try {
+					await sleep(Math.random() * (50 - 0) + 0);
+					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", `${value.slot + 40}`, `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`, value.scrapValue, "take", controller);
+					await makeGetStorageRequest();
+					if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
+						throw "Inventory is full";
+					} else if (index === validItems.length - 1) {
 						unsafeWindow.updateAllFields();
-						throw error;
-					});
+						throw "Storage is empty";
+					}
+				} catch (error) {
+					unsafeWindow.updateAllFields();
+				}
 			}
 		});
 	}
