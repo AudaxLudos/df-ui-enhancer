@@ -366,43 +366,50 @@
 		let usableFood = getUsableFood();
 		let cookFood = usableFood[1];
 
-		if (parseInt(userVars["DFSTATS_df_hungerhp"]) >= 100) {
-			throw "Nourishment is full";
-		}
-		if (inventorySlotNumber === false) {
-			throw "Inventory is full";
-		}
+		try {
+			if (parseInt(userVars["DFSTATS_df_hungerhp"]) >= 100) {
+				throw "Nourishment is full";
+			}
+			if (inventorySlotNumber === false) {
+				throw "Inventory is full";
+			}
 
-		let availableFoods = await makeMarketSearchRequest(encodeURI(usableFood[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
-		if (cookFood) {
-			availableFoods = availableFoods.filter((value) => value["itemId"].includes("cooked"));
+			let availableFoods = await makeMarketSearchRequest(encodeURI(usableFood[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
+			if (cookFood) {
+				availableFoods = availableFoods.filter((value) => value["itemId"].includes("cooked"));
+			}
+
+			if (availableFoods === undefined || availableFoods.length == 0) {
+				throw `No ${usableFood[0]["name"]} trades available`;
+			}
+
+			let buyableFood = availableFoods[0];
+
+			if (playerCash < buyableFood["price"]) {
+				throw "You do not have enough cash";
+			}
+
+			replenishHungerButton.disabled = false;
+			replenishHungerButton.addEventListener("click", () => {
+				openYesOrNoPrompt(
+					`Are you sure you want to buy and use <span style="color: red;">${cookFood ? "Cooked " : " "}${usableFood[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(buyableFood["price"])}</span>?`,
+					async (e) => {
+						openLoadingPrompt("Replenishing nourishment...");
+						await makeInventoryRequest("undefined", buyableFood["tradeId"], "undefined`undefined", `${buyableFood["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", usableFood[0]["code"], inventorySlotNumber, "", 0, "newconsume", null);
+						await unsafeWindow.playSound("eat");
+						await restoreHealthHelper();
+						await unsafeWindow.updateAllFields();
+					},
+					(e) => unsafeWindow.updateAllFields()
+				);
+			});
+		} catch (error) {
+			replenishHungerButton.disabled = false;
+			replenishHungerButton.addEventListener("click", () => {
+				openPromptWithButton(error, "Close", (e) => unsafeWindow.updateAllFields());
+			});
 		}
-
-		if (availableFoods === undefined || availableFoods.length == 0) {
-			throw `No ${usableFood[0]["name"]} trades available`;
-		}
-
-		let buyableFood = availableFoods[0];
-
-		if (playerCash < buyableFood["price"]) {
-			throw "You do not have enough cash";
-		}
-
-		replenishHungerButton.disabled = false;
-		replenishHungerButton.addEventListener("click", () => {
-			openYesOrNoPrompt(
-				`Are you sure you want to buy and use <span style="color: red;">${cookFood ? "Cooked " : " "}${usableFood[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(buyableFood["price"])}</span>?`,
-				async (e) => {
-					openLoadingPrompt("Replenishing nourishment...");
-					await makeInventoryRequest("undefined", buyableFood["tradeId"], "undefined`undefined", `${buyableFood["price"]}`, "", "", "0", "0", "0", "newbuy", null);
-					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", usableFood[0]["code"], inventorySlotNumber, "", 0, "newconsume", null);
-					await unsafeWindow.playSound("eat");
-					await restoreHealthHelper();
-					await unsafeWindow.updateAllFields();
-				},
-				(e) => unsafeWindow.updateAllFields()
-			);
-		});
 	}
 
 	function getSuitableFoods() {
@@ -490,62 +497,69 @@
 		let usableMed = getUsableMed();
 		let adminsterMed = usableMed[1];
 
-		if (parseInt(userVars["DFSTATS_df_hpcurrent"]) >= parseInt(userVars["DFSTATS_df_hpmax"])) {
-			throw "Health is full";
-		}
-		if (inventorySlotNumber === false) {
-			throw "Inventory is full";
-		}
-
-		let medAdminsterLevel = usableMed[0]["level"] - 5;
-		let availableMeds = await makeMarketSearchRequest(encodeURI(usableMed[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
-
-		if (availableMeds === undefined || availableMeds.length == 0) {
-			throw `No ${usableMed[0]["name"]} trades available`;
-		}
-
-		let buyableMed = availableMeds[0];
-		let totalCost = buyableMed["price"];
-
-		if (playerCash < totalCost) {
-			throw "You do not have enough cash";
-		}
-
-		let usableService = null;
-		if (adminsterMed) {
-			let availableServices = await makeMarketSearchRequest("", "buyinglist", "Doctor", "services", filterServiceResponseText);
-			if (availableServices[medAdminsterLevel] == null) {
-				throw `No level ${medAdminsterLevel} doctor services available`;
+		try {
+			if (parseInt(userVars["DFSTATS_df_hpcurrent"]) >= parseInt(userVars["DFSTATS_df_hpmax"])) {
+				throw "Health is full";
+			}
+			if (inventorySlotNumber === false) {
+				throw "Inventory is full";
 			}
 
-			usableService = availableServices[medAdminsterLevel][0];
+			let medAdminsterLevel = usableMed[0]["level"] - 5;
+			let availableMeds = await makeMarketSearchRequest(encodeURI(usableMed[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
 
-			totalCost += usableService["price"];
+			if (availableMeds === undefined || availableMeds.length == 0) {
+				throw `No ${usableMed[0]["name"]} trades available`;
+			}
+
+			let buyableMed = availableMeds[0];
+			let totalCost = buyableMed["price"];
 
 			if (playerCash < totalCost) {
 				throw "You do not have enough cash";
 			}
-		}
 
-		restoreHealthButton.disabled = false;
-		restoreHealthButton.addEventListener("click", () => {
-			openYesOrNoPrompt(
-				`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
-				async (e) => {
-					openLoadingPrompt("Restoring health...");
-					await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
-					if (adminsterMed) {
-						await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
-					} else {
-						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
-					}
-					await unsafeWindow.playSound("heal");
-					await restoreHealthHelper();
-					await unsafeWindow.updateAllFields();
-				},
-				(e) => unsafeWindow.updateAllFields()
-			);
-		});
+			let usableService = null;
+			if (adminsterMed) {
+				let availableServices = await makeMarketSearchRequest("", "buyinglist", "Doctor", "services", filterServiceResponseText);
+				if (availableServices[medAdminsterLevel] == null) {
+					throw `No level ${medAdminsterLevel} doctor services available`;
+				}
+
+				usableService = availableServices[medAdminsterLevel][0];
+
+				totalCost += usableService["price"];
+
+				if (playerCash < totalCost) {
+					throw "You do not have enough cash";
+				}
+			}
+
+			restoreHealthButton.disabled = false;
+			restoreHealthButton.addEventListener("click", () => {
+				openYesOrNoPrompt(
+					`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
+					async (e) => {
+						openLoadingPrompt("Restoring health...");
+						await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
+						if (adminsterMed) {
+							await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
+						} else {
+							await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
+						}
+						await unsafeWindow.playSound("heal");
+						await restoreHealthHelper();
+						await unsafeWindow.updateAllFields();
+					},
+					(e) => unsafeWindow.updateAllFields()
+				);
+			});
+		} catch (error) {
+			restoreHealthButton.disabled = false;
+			restoreHealthButton.addEventListener("click", () => {
+				openPromptWithButton(error, "Close", (e) => unsafeWindow.updateAllFields());
+			});
+		}
 	}
 
 	function getSuitableMeds() {
@@ -633,51 +647,58 @@
 		let armourRepairLevel = armourData["shop_level"] - 5;
 		let inventorySlotNumber = unsafeWindow.findFirstEmptyGenericSlot("inv");
 
-		if (playerArmour == "") {
-			throw "No equipped armour found";
-		}
-		if (parseInt(userVars["DFSTATS_df_armourhp"]) >= parseInt(userVars["DFSTATS_df_armourhpmax"])) {
-			throw "Armour not in need of repairs";
-		}
-		if (inventorySlotNumber === false) {
-			throw "Inventory is full";
-		}
-
-		await makeMarketSearchRequest("", "buyinglist", "Engineer", "services", filterServiceResponseText).then((response) => {
-			if (response[armourRepairLevel] == null) {
-				throw `No level ${armourRepairLevel} repair service available`;
+		try {
+			if (playerArmour == "") {
+				throw "No equipped armour found";
+			}
+			if (parseInt(userVars["DFSTATS_df_armourhp"]) >= parseInt(userVars["DFSTATS_df_armourhpmax"])) {
+				throw "Armour not in need of repairs";
+			}
+			if (inventorySlotNumber === false) {
+				throw "Inventory is full";
 			}
 
-			let serviceData = response[armourRepairLevel][0];
+			await makeMarketSearchRequest("", "buyinglist", "Engineer", "services", filterServiceResponseText).then((response) => {
+				if (response[armourRepairLevel] == null) {
+					throw `No level ${armourRepairLevel} repair service available`;
+				}
 
-			if (playerCash < serviceData["price"]) {
-				throw "You do not have enough cash";
-			}
+				let serviceData = response[armourRepairLevel][0];
 
+				if (playerCash < serviceData["price"]) {
+					throw "You do not have enough cash";
+				}
+
+				repairArmorButton.disabled = false;
+				repairArmorButton.addEventListener("click", () => {
+					openYesOrNoPrompt(
+						`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">${formatCurrency(serviceData["price"])}</span>?`,
+						async (e) => {
+							openLoadingPrompt("Repairing armour...");
+							await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", userVars["DFSTATS_df_armourtype"], inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null)
+								.then(() => makeInventoryRequest("0", serviceData["userId"], "undefined`undefined", serviceData["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyrepair", null))
+								.then(() => unsafeWindow.playSound("repair"))
+								.then(() => makeInventoryRequest("0", "0", "undefined`undefined", "-1", userVars["DFSTATS_df_armourtype"], "", inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null))
+								.then(() => {
+									repairArmorHelper();
+									unsafeWindow.updateAllFields();
+								})
+								.catch((error) => {
+									repairArmorHelper();
+									unsafeWindow.updateAllFields();
+									throw error;
+								});
+						},
+						(e) => unsafeWindow.updateAllFields()
+					);
+				});
+			});
+		} catch (error) {
 			repairArmorButton.disabled = false;
 			repairArmorButton.addEventListener("click", () => {
-				openYesOrNoPrompt(
-					`Are you sure you want to repair your <span style="color: red;">${userVars["DFSTATS_df_armourname"]}</span> for <span style="color: #FFCC00;">${formatCurrency(serviceData["price"])}</span>?`,
-					async (e) => {
-						openLoadingPrompt("Repairing armour...");
-						await makeInventoryRequest("0", "0", "undefined`undefined", "-1", "", userVars["DFSTATS_df_armourtype"], inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null)
-							.then(() => makeInventoryRequest("0", serviceData["userId"], "undefined`undefined", serviceData["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyrepair", null))
-							.then(() => unsafeWindow.playSound("repair"))
-							.then(() => makeInventoryRequest("0", "0", "undefined`undefined", "-1", userVars["DFSTATS_df_armourtype"], "", inventorySlotNumber, "34", unsafeWindow.getUpgradePrice(), "newequip", null))
-							.then(() => {
-								repairArmorHelper();
-								unsafeWindow.updateAllFields();
-							})
-							.catch((error) => {
-								repairArmorHelper();
-								unsafeWindow.updateAllFields();
-								throw error;
-							});
-					},
-					(e) => unsafeWindow.updateAllFields()
-				);
+				openPromptWithButton(error, "Close", (e) => unsafeWindow.updateAllFields());
 			});
-		});
+		}
 	}
 
 	function getInventorySlotsWithItem() {
@@ -705,6 +726,24 @@
 		prompt.style.display = "block";
 		gamecontent.classList.remove("warning");
 		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
+	}
+
+	function openPromptWithButton(message, buttonName, buttonCallback) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.remove("warning");
+		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
+
+		let button = document.createElement("button");
+		button.textContent = buttonName;
+		button.style.position = "absolute";
+		button.style.left = "111px";
+		button.style.bottom = "8px";
+		button.addEventListener("click", buttonCallback);
+
+		gamecontent.append(button);
 	}
 
 	function openCancelPrompt(message, callback) {
