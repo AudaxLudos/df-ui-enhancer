@@ -392,6 +392,7 @@
 				try {
 					await sleep(Math.random() * (50 - 0) + 0);
 					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", value.slot, `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`, value.scrapValue, "store", controller);
+					unsafeWindow.playSound("swap");
 					await makeGetStorageRequest();
 					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
 						throw "Storage is full";
@@ -443,6 +444,7 @@
 				try {
 					await sleep(Math.random() * (50 - 0) + 0);
 					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", `${value.slot + 40}`, `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`, value.scrapValue, "take", controller);
+					unsafeWindow.playSound("swap");
 					await makeGetStorageRequest();
 					if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
 						throw "Inventory is full";
@@ -702,103 +704,6 @@
 		}
 	}
 
-	function getInventorySlotsWithItem() {
-		let validItems = [];
-		[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
-			.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
-			.forEach((slotWithItem) => {
-				let itemElement = slotWithItem.firstChild;
-				let id = itemElement.getAttribute("data-type");
-				let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
-				let scrapValue = unsafeWindow.scrapValue(id, quantity);
-				validItems.push({
-					slot: slotWithItem.getAttribute("data-slot"),
-					id: id,
-					scrapValue: scrapValue,
-				});
-			});
-		return validItems;
-	}
-
-	function openLoadingPrompt(message) {
-		let prompt = document.getElementById("prompt");
-		let gamecontent = document.getElementById("gamecontent");
-
-		prompt.style.display = "block";
-		gamecontent.classList.remove("warning");
-		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
-	}
-
-	function openPromptWithButton(message, buttonName, buttonCallback) {
-		let prompt = document.getElementById("prompt");
-		let gamecontent = document.getElementById("gamecontent");
-
-		prompt.style.display = "block";
-		gamecontent.classList.remove("warning");
-		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
-
-		let button = document.createElement("button");
-		button.textContent = buttonName;
-		button.style.position = "absolute";
-		button.style.left = "111px";
-		button.style.bottom = "8px";
-		button.addEventListener("click", buttonCallback);
-
-		gamecontent.append(button);
-	}
-
-	function openCancelPrompt(message, callback) {
-		let prompt = document.getElementById("prompt");
-		let gamecontent = document.getElementById("gamecontent");
-
-		prompt.style.display = "block";
-		gamecontent.classList.remove("warning");
-		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
-
-		let cancelButton = document.createElement("button");
-		cancelButton.textContent = "Cancel";
-		cancelButton.style.position = "absolute";
-		cancelButton.style.left = "111px";
-		cancelButton.style.bottom = "8px";
-		cancelButton.addEventListener("click", callback);
-
-		gamecontent.append(cancelButton);
-	}
-
-	function openYesOrNoPrompt(message, yesCallback, noCallback) {
-		let prompt = document.getElementById("prompt");
-		let gamecontent = document.getElementById("gamecontent");
-
-		prompt.style.display = "block";
-		gamecontent.classList.add("warning");
-		gamecontent.innerHTML = message;
-
-		let yesButton = document.createElement("button");
-		yesButton.style.position = "absolute";
-		yesButton.style.left = "86px";
-		yesButton.style.bottom = "8px";
-		yesButton.innerHTML = "Yes";
-		yesButton.addEventListener("click", yesCallback);
-		gamecontent.appendChild(yesButton);
-
-		let noButton = document.createElement("button");
-		noButton.style.position = "absolute";
-		noButton.style.right = "86px";
-		noButton.style.bottom = "8px";
-		noButton.innerHTML = "No";
-		noButton.addEventListener("click", noCallback);
-		gamecontent.appendChild(noButton);
-	}
-
-	function closePopupAds() {
-		let popupElement = document.getElementById("DFAdBoxData");
-		if (popupElement) {
-			document.getElementById("fancybox-overlay").style.display = "none";
-			document.getElementById("fancybox-wrap").style.display = "none";
-			document.getElementById("DFAdBoxData").parentElement.remove();
-		}
-	}
-
 	function marketItemPriceHelper() {
 		if (unsafeWindow.inventoryHolder == null) {
 			return;
@@ -872,6 +777,89 @@
 				document.getElementById("infoBox").append(customMarketInfo);
 			}.bind(unsafeWindow);
 			inventoryHolder.addEventListener("mouseover", unsafeWindow.infoCard, false);
+		}
+	}
+
+	function getInventorySlotsWithItem() {
+		let validItems = [];
+		[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
+			.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
+			.forEach((slotWithItem) => {
+				let itemElement = slotWithItem.firstChild;
+				let id = itemElement.getAttribute("data-type");
+				let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
+				let scrapValue = unsafeWindow.scrapValue(id, quantity);
+				validItems.push({
+					slot: slotWithItem.getAttribute("data-slot"),
+					id: id,
+					scrapValue: scrapValue,
+				});
+			});
+		return validItems;
+	}
+
+	function openLoadingPrompt(message) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.remove("warning");
+		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
+	}
+
+	function openPromptWithButton(message, buttonName, buttonCallback) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.remove("warning");
+		gamecontent.innerHTML = `<div style="text-align: center;">${message}</div>`;
+
+		let button = document.createElement("button");
+		button.textContent = buttonName;
+		button.style.position = "absolute";
+		button.style.left = "111px";
+		button.style.bottom = "8px";
+		button.addEventListener("click", buttonCallback);
+
+		gamecontent.append(button);
+	}
+
+	function openCancelPrompt(message, buttonCallback) {
+		openPromptWithButton(message, "Cancel", buttonCallback);
+	}
+
+	function openYesOrNoPrompt(message, yesCallback, noCallback) {
+		let prompt = document.getElementById("prompt");
+		let gamecontent = document.getElementById("gamecontent");
+
+		prompt.style.display = "block";
+		gamecontent.classList.add("warning");
+		gamecontent.innerHTML = message;
+
+		let yesButton = document.createElement("button");
+		yesButton.style.position = "absolute";
+		yesButton.style.left = "86px";
+		yesButton.style.bottom = "8px";
+		yesButton.innerHTML = "Yes";
+		yesButton.addEventListener("click", yesCallback);
+		gamecontent.appendChild(yesButton);
+
+		let noButton = document.createElement("button");
+		noButton.style.position = "absolute";
+		noButton.style.right = "86px";
+		noButton.style.bottom = "8px";
+		noButton.innerHTML = "No";
+		noButton.addEventListener("click", noCallback);
+		gamecontent.appendChild(noButton);
+	}
+
+	function closePopupAds() {
+		let popupElement = document.getElementById("DFAdBoxData");
+		if (popupElement) {
+			document.getElementById("fancybox-overlay").style.display = "none";
+			document.getElementById("fancybox-wrap").style.display = "none";
+			document.getElementById("DFAdBoxData").parentElement.remove();
 		}
 	}
 
@@ -977,7 +965,7 @@
 		);
 	}
 
-	function addQuickMarketSearchListener() {
+	function quickMarketSearchLHelper() {
 		if (unsafeWindow.inventoryHolder == null) {
 			return;
 		}
@@ -1006,7 +994,7 @@
 		});
 	}
 
-	function addClearSearchOnCategoryClickListener() {
+	function clearSearchOnCategoryClickHelper() {
 		if (unsafeWindow.inventoryHolder == null) {
 			return;
 		}
@@ -1036,8 +1024,8 @@
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
-		addQuickMarketSearchListener();
-		addClearSearchOnCategoryClickListener();
+		quickMarketSearchLHelper();
+		clearSearchOnCategoryClickHelper();
 		marketItemPriceHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
