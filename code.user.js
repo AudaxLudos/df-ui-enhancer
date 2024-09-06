@@ -325,6 +325,24 @@
 		return [optimalMed, adminsterMed];
 	}
 
+	function getInventorySlotsWithItem() {
+		let validItems = [];
+		[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
+			.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
+			.forEach((slotWithItem) => {
+				let itemElement = slotWithItem.firstChild;
+				let id = itemElement.getAttribute("data-type");
+				let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
+				let scrapValue = unsafeWindow.scrapValue(id, quantity);
+				validItems.push({
+					slot: slotWithItem.getAttribute("data-slot"),
+					id: id,
+					scrapValue: scrapValue,
+				});
+			});
+		return validItems;
+	}
+
 	////////////////////////////
 	// UI ENCHANCERS
 	////////////////////////////
@@ -778,24 +796,6 @@
 			}.bind(unsafeWindow);
 			inventoryHolder.addEventListener("mouseover", unsafeWindow.infoCard, false);
 		}
-	}
-
-	function getInventorySlotsWithItem() {
-		let validItems = [];
-		[...unsafeWindow.inventory.getElementsByClassName("validSlot")]
-			.filter((node) => node.hasChildNodes() && !node.classList.contains("locked"))
-			.forEach((slotWithItem) => {
-				let itemElement = slotWithItem.firstChild;
-				let id = itemElement.getAttribute("data-type");
-				let quantity = itemElement.getAttribute("data-quantity") ? itemElement.getAttribute("data-quantity") : 1;
-				let scrapValue = unsafeWindow.scrapValue(id, quantity);
-				validItems.push({
-					slot: slotWithItem.getAttribute("data-slot"),
-					id: id,
-					scrapValue: scrapValue,
-				});
-			});
-		return validItems;
 	}
 
 	function openLoadingPrompt(message) {
