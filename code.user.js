@@ -53,8 +53,8 @@
 	}
 
 	function serializeObject(obj) {
-		var pairs = [];
-		for (var prop in obj) {
+		let pairs = [];
+		for (let prop in obj) {
 			if (!obj.hasOwnProperty(prop)) {
 				continue;
 			}
@@ -77,7 +77,7 @@
 			.then((response) => response.text())
 			.then((response) => {
 				if (!response) {
-					throw "Connection Error";
+					throw "Connection error";
 				}
 				return callback ? callback(response, callbackParams) : true;
 			});
@@ -112,7 +112,37 @@
 		requestParams["userID"] = userVars["userID"];
 		requestParams["password"] = userVars["password"];
 
+		let updateStorage = (storageData) => {
+			unsafeWindow.storageBox = unsafeWindow.flshToArr(storageData);
+			unsafeWindow.populateStorage();
+			unsafeWindow.updateAllFieldsBase();
+		};
+
 		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/get_storage.php", requestParams, null, updateStorage, null);
+	}
+
+	function makeWithdrawRequest(amount) {
+		let requestParams = {};
+		requestParams["withdraw"] = amount;
+		requestParams["sc"] = userVars["sc"];
+		requestParams["userID"] = userVars["userID"];
+		requestParams["password"] = userVars["password"];
+
+		let updateMarketAndBank = (cashData) => {
+			unsafeWindow.playSound("bank");
+			let cashFields = cashData.split("&");
+			let newBankCash = cashFields[1].split("=")[1];
+			let newHeldCash = cashFields[2].split("=")[1];
+			userVars["DFSTATS_df_cash"] = newHeldCash;
+			userVars["DFSTATS_df_bankcash"] = newBankCash;
+			unsafeWindow.updateAllFields();
+			let itemDisplay = document.getElementById("itemDisplay");
+			itemDisplay.scrollTop = 0;
+			itemDisplay.scrollLeft = 0;
+			unsafeWindow.search();
+		};
+
+		return makeRequest("https://fairview.deadfrontier.com/onlinezombiemmo/bank.php", requestParams, null, updateMarketAndBank, null);
 	}
 
 	function makeMarketSearchRequest(searchName, searchType, profession, search, callback) {
@@ -131,10 +161,10 @@
 
 	function filterServiceResponseText(response) {
 		let services = {};
-		var responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
+		let responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
 		if (response != "") {
-			for (var i = 0; i < responseLength; i++) {
-				var serviceLevel = parseInt(
+			for (let i = 0; i < responseLength; i++) {
+				let serviceLevel = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_level=[0-9]+&"))[0]
 						.split("=")[1]
@@ -143,7 +173,7 @@
 				if (services[serviceLevel] == undefined) {
 					services[serviceLevel] = [];
 				}
-				var service = {};
+				let service = {};
 				service["userId"] = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_id_member=[0-9]+&"))[0]
@@ -166,8 +196,8 @@
 		let trades = [];
 		let responseLength = [...response.matchAll(new RegExp("tradelist_[0-9]+_id_member=", "g"))].length;
 		if (response != "") {
-			for (var i = 0; i < responseLength; i++) {
-				var trade = {};
+			for (let i = 0; i < responseLength; i++) {
+				let trade = {};
 				trade["tradeId"] = parseInt(
 					response
 						.match(new RegExp("tradelist_" + i + "_trade_id=[0-9]+&"))[0]
@@ -175,7 +205,7 @@
 						.match(/[0-9]+/)[0]
 				);
 				trade["itemId"] = response
-					.match(new RegExp("tradelist_" + i + "_item=[a-zA-Z0-9_]+&"))[0]
+					.match(new RegExp("tradelist_" + i + "_item=[a-zA-Z0-9_ ]+&"))[0]
 					.split("=")[1]
 					.match(/[a-zA-Z0-9_]+/)[0];
 				trade["price"] = parseInt(
@@ -188,12 +218,6 @@
 			}
 		}
 		return trades;
-	}
-
-	function updateStorage(storageData) {
-		unsafeWindow.storageBox = unsafeWindow.flshToArr(storageData);
-		unsafeWindow.populateStorage();
-		unsafeWindow.updateAllFieldsBase();
 	}
 
 	function updateInventory(inventoryData) {
@@ -377,6 +401,7 @@
 							unsafeWindow.playSound("shop_buysell");
 							if (index === validItems.length - 1) {
 								unsafeWindow.updateAllFields();
+								throw "Inventory is empty";
 							}
 						} catch (error) {
 							unsafeWindow.updateAllFields();
@@ -726,7 +751,7 @@
 		if (unsafeWindow.inventoryHolder == null) {
 			return;
 		}
-		var origInfoCard = unsafeWindow.infoCard || null;
+		let origInfoCard = unsafeWindow.infoCard || null;
 		if (origInfoCard) {
 			unsafeWindow.infoCard = async function (e) {
 				origInfoCard(e);
@@ -734,11 +759,13 @@
 					return;
 				}
 
-				let target;
+				let target = e.target;
+				let isInventorySlot = true;
 				if (e.target.parentNode.classList.contains("fakeItem")) {
 					target = e.target.parentNode;
-				} else {
-					target = e.target;
+					isInventorySlot = false;
+				} else if (e.target.classList.contains("fakeItem")) {
+					isInventorySlot = false;
 				}
 
 				if (!target.classList.contains("item") && !target.classList.contains("fakeItem")) {
@@ -765,7 +792,7 @@
 				`;
 				customMarketInfo.append(scrapInfo);
 
-				if (globalData[item]["no_transfer"] == null || globalData[item]["no_transfer"] == "0") {
+				if (isInventorySlot && (globalData[item]["no_transfer"] == null || globalData[item]["no_transfer"] == "0")) {
 					let tradeList = itemTradeData[item];
 					if (!tradeList) {
 						if (!requestPool.includes(item)) {
@@ -796,6 +823,106 @@
 			}.bind(unsafeWindow);
 			inventoryHolder.addEventListener("mouseover", unsafeWindow.infoCard, false);
 		}
+	}
+
+	function marketItemPriceWithdrawHelper() {
+		function updateBuyButton(marketRow) {
+			let itemPrice = marketRow.dataset.price;
+			if (itemPrice <= parseInt(userVars["DFSTATS_df_cash"])) {
+				return;
+			}
+			let buyButton = marketRow.getElementsByTagName("button")[0] || false;
+			if (!buyButton) {
+				return;
+			}
+			let withdrawButton = buyButton.cloneNode(true);
+			marketRow.replaceChild(withdrawButton, buyButton);
+			withdrawButton.innerHTML = "withdraw";
+			withdrawButton.style.left = "576px";
+			withdrawButton.disabled = true;
+			if (parseInt(userVars["DFSTATS_df_bankcash"]) > itemPrice) {
+				withdrawButton.disabled = false;
+			}
+			withdrawButton.addEventListener("click", makeWithdrawRequest.bind(null, itemPrice));
+		}
+
+		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
+			return;
+		}
+
+		let target = document.getElementById("itemDisplay");
+		let config = { childList: true, subtree: true };
+
+		let marketListObserver = new MutationObserver((mutationList, observer) => {
+			if (unsafeWindow.marketScreen == "buy") {
+				for (let mutation of mutationList) {
+					if (mutation.addedNodes.length > 0) {
+						if (mutation.addedNodes[0].tagName != "BUTTON" && mutation.target.tagName != "BUTTON") {
+							updateBuyButton(mutation.addedNodes[0]);
+						}
+					}
+				}
+			}
+		});
+
+		marketListObserver.observe(target, config);
+	}
+
+	function expandInventoryToSidebarHelper() {
+		function overrideDisplayPlacementMessage(msg, x, y, type) {
+			let gameWindow = document.getElementById("gameWindow");
+			let oldInventoryHolder = unsafeWindow.inventoryHolder;
+			unsafeWindow.inventoryHolder = gameWindow;
+			unsafeWindow.vanillaDisplayPlacementMessage(msg, x, y, type);
+			unsafeWindow.inventoryHolder = oldInventoryHolder;
+		}
+
+		function overrideFakeItemDrag(e) {
+			let gameWindow = document.getElementById("gameWindow");
+			let oldInventoryHolder = unsafeWindow.inventoryHolder;
+			unsafeWindow.inventoryHolder = gameWindow;
+			unsafeWindow.drag(e);
+			unsafeWindow.inventoryHolder = oldInventoryHolder;
+		}
+
+		if (unsafeWindow.inventoryHolder == null) {
+			return;
+		}
+
+		let tooltip = document.getElementById("textAddon");
+		let newParent = tooltip.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode.parentNode;
+		tooltip.style.position = "absolute";
+		tooltip.style.fontFamily = "Courier New,Arial";
+		tooltip.style.fontWeight = 600;
+		tooltip.style.textAlign = "center";
+		tooltip.style.zIndex = 20;
+		newParent.id = "gameWindow";
+		newParent.style.position = "relative";
+		newParent.appendChild(tooltip);
+
+		unsafeWindow.vanillaDisplayPlacementMessage = unsafeWindow.displayPlacementMessage;
+		unsafeWindow.displayPlacementMessage = overrideDisplayPlacementMessage;
+
+		unsafeWindow.inventoryHolder.removeEventListener("mousemove", unsafeWindow.drag);
+		newParent.addEventListener("mousemove", overrideFakeItemDrag);
+
+		let fakeGrabbedItem = document.getElementById("fakeGrabbedItem");
+		fakeGrabbedItem.style.position = "absolute";
+		fakeGrabbedItem.style.display = "none";
+		fakeGrabbedItem.style.width = "40px";
+		fakeGrabbedItem.style.height = "40px";
+		fakeGrabbedItem.style.opacity = 0.6;
+		newParent.appendChild(fakeGrabbedItem);
+
+		let interactionWindow = document.createElement("div");
+		interactionWindow.style.position = "absolute";
+		interactionWindow.style.width = "85px";
+		interactionWindow.style.height = "270px";
+		interactionWindow.style.left = "0px";
+		interactionWindow.style.top = "80px";
+		interactionWindow.dataset.action = "giveToChar";
+		interactionWindow.className = "fakeSlot";
+		document.getElementById("sidebar").appendChild(interactionWindow);
 	}
 
 	function openLoadingPrompt(message) {
@@ -900,7 +1027,7 @@
 		$("body > table:nth-child(3)").hide();
 	}
 
-	function addOutpostQuickLinks() {
+	function outpostQuickLinksHelper() {
 		if (unsafeWindow.jQuery == null) {
 			return;
 		}
@@ -1019,16 +1146,18 @@
 	////////////////////////////
 	setTimeout(() => {
 		closePopupAds();
-		addOutpostQuickLinks();
 		modifyUserInterface();
+		outpostQuickLinksHelper();
+		expandInventoryToSidebarHelper();
 		scrapInventoryHelper();
 		storeStorageHelper();
 		takeStorageHelper();
 		quickMarketSearchLHelper();
 		clearSearchOnCategoryClickHelper();
-		marketItemPriceHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
 		repairArmorHelper();
+		marketItemPriceHelper();
+		marketItemPriceWithdrawHelper();
 	}, 500);
 })();
