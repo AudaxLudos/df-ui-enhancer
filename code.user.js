@@ -18,8 +18,7 @@
 
 	let globalData = unsafeWindow.globalData;
 	let userVars = unsafeWindow.userVars;
-	let requestPool = [];
-	let itemTradeData = {};
+	let itemsTradeData = {};
 
 	////////////////////////////
 	// UTILITY FUNCTIONS
@@ -367,6 +366,33 @@
 		return validItems;
 	}
 
+	function loadItemsTradeData() {
+		const data = localStorage.getItem("df_itemsTradeData") || JSON.stringify(itemsTradeData);
+
+		try {
+			itemsTradeData = JSON.parse(data);
+		} catch (error) {
+			console.error("Failed to parse items trade data:", error);
+			localStorage.setItem("df_itemsTradeData", JSON.stringify(itemsTradeData));
+		}
+	}
+
+	async function getItemTradeData(itemId) {
+		if (itemId in itemsTradeData) {
+			if (Date.now() / 1000 - itemsTradeData[itemId]["timestamp"] < 3600) {
+				return itemsTradeData[itemId];
+			}
+		}
+		let itemTrades = await makeMarketSearchRequest(encodeURI(globalData[itemId]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
+		itemTrades = await itemTrades.filter((value) => value["itemId"].split("_")[0] == itemId);
+		itemTrades = itemTrades.slice(0, 5);
+		itemsTradeData[itemId] = {};
+		itemsTradeData[itemId]["timestamp"] = Date.now() / 1000;
+		itemsTradeData[itemId]["trades"] = itemTrades;
+		localStorage.setItem("df_itemsTradeData", JSON.stringify(itemsTradeData));
+		return itemsTradeData[itemId];
+	}
+
 	////////////////////////////
 	// UI ENCHANCERS
 	////////////////////////////
@@ -405,6 +431,7 @@
 							}
 						} catch (error) {
 							unsafeWindow.updateAllFields();
+							return;
 						}
 					}
 				},
@@ -445,6 +472,7 @@
 					}
 				} catch (error) {
 					unsafeWindow.updateAllFields();
+					return;
 				}
 			}
 		});
@@ -497,6 +525,7 @@
 					}
 				} catch (error) {
 					unsafeWindow.updateAllFields();
+					return;
 				}
 			}
 		});
@@ -564,6 +593,7 @@
 						} catch (error) {
 							replenishHungerHelper();
 							unsafeWindow.updateAllFields();
+							return;
 						}
 					},
 					(e) => unsafeWindow.updateAllFields()
@@ -658,6 +688,7 @@
 						} catch (error) {
 							restoreHealthHelper();
 							unsafeWindow.updateAllFields();
+							return;
 						}
 					},
 					(e) => unsafeWindow.updateAllFields()
@@ -772,54 +803,47 @@
 					return;
 				}
 
-				const item = target.dataset.type?.split("_")[0] || null;
+				const itemId = target.dataset.type?.split("_")[0] || null;
 				const quantity = target.dataset.quantity || 1;
-				if (!item) {
+				if (!itemId) {
 					return;
 				}
 
-				let customMarketInfo = document.getElementById("customMarketInfo");
-				if (customMarketInfo) {
-					customMarketInfo.remove();
+				let scrapValueInfo = document.getElementById("scrapValueInfo");
+				if (scrapValueInfo) {
+					scrapValueInfo.remove();
 				}
-				customMarketInfo = document.createElement("div");
-				customMarketInfo.id = "customMarketInfo";
-				customMarketInfo.classList.add("itemData");
-
-				let scrapInfo = document.createElement("div");
-				scrapInfo.innerHTML = `
-					Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(item, quantity))}
+				scrapValueInfo = document.createElement("div");
+				scrapValueInfo.id = "scrapValueInfo";
+				scrapValueInfo.classList.add("itemData");
+				scrapValueInfo.innerHTML = `
+					Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(itemId, quantity))}
 				`;
-				customMarketInfo.append(scrapInfo);
+				document.getElementById("infoBox").append(scrapValueInfo);
 
-				if (isInventorySlot && (globalData[item]["no_transfer"] == null || globalData[item]["no_transfer"] == "0")) {
-					let tradeList = itemTradeData[item];
-					if (!tradeList) {
-						if (!requestPool.includes(item)) {
-							requestPool.push(item);
-							tradeList = await makeMarketSearchRequest(encodeURI(globalData[item]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
-							tradeList = await tradeList.filter((value) => value["itemId"].split("_")[0] == item);
-							requestPool = await requestPool.filter((value) => value != item);
-							itemTradeData[item] = tradeList;
-						} else {
-							throw "An item request is in progress";
-						}
+				if (isInventorySlot && (globalData[itemId]["no_transfer"] == null || globalData[itemId]["no_transfer"] == "0")) {
+					let itemTradeData = await getItemTradeData(itemId);
+					let trades = itemTradeData["trades"];
+					let itemPricesInfo = document.getElementById("itemPricesInfo");
+					if (itemPricesInfo) {
+						itemPricesInfo.remove();
 					}
-
-					if (tradeList && tradeList.length > 0) {
-						let length = tradeList.length <= 4 ? tradeList.length : 4;
+					itemPricesInfo = document.createElement("div");
+					itemPricesInfo.id = "itemPricesInfo";
+					itemPricesInfo.classList.add("itemData");
+					if (trades && trades.length > 0) {
+						let length = trades.length <= 4 ? trades.length : 4;
 						for (let i = 0; i < length; i++) {
-							const data = tradeList[i];
+							const data = trades[i];
 							let tradeInfo = document.createElement("div");
 							tradeInfo.innerHTML = `
 							${formatOrdinalNum(i + 1)} Trade: ${formatCurrency(data["price"])}
 						`;
-							customMarketInfo.appendChild(tradeInfo);
+							itemPricesInfo.appendChild(tradeInfo);
 						}
 					}
+					document.getElementById("infoBox").append(itemPricesInfo);
 				}
-
-				document.getElementById("infoBox").append(customMarketInfo);
 			}.bind(unsafeWindow);
 			inventoryHolder.addEventListener("mouseover", unsafeWindow.infoCard, false);
 		}
@@ -1145,6 +1169,8 @@
 	// SCRIPT INJECTION
 	////////////////////////////
 	setTimeout(() => {
+		loadItemsTradeData();
+
 		closePopupAds();
 		modifyUserInterface();
 		outpostQuickLinksHelper();
