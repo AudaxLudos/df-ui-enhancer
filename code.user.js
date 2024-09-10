@@ -418,7 +418,7 @@
 			openYesOrNoPrompt(
 				`Are you sure you want to scrap your <span style="color: red;">Inventory</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 				async (e) => {
-					if (validItems.length > 0) openCancelPrompt("Scrapping inventory items...", (e) => controller.abort());
+					if (validItems.length > 0) openPromptWithButton("Scrapping inventory items...", "Cancel", (e) => controller.abort());
 
 					for (const [index, value] of validItems.entries()) {
 						try {
@@ -456,7 +456,7 @@
 			const controller = new AbortController();
 			let validItems = getInventorySlotsWithItem();
 
-			if (validItems.length > 0) openCancelPrompt("Storing inventory items to storage...", (e) => controller.abort());
+			if (validItems.length > 0) openPromptWithButton("Storing inventory items to storage...", "Cancel", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
 				try {
@@ -509,7 +509,7 @@
 				}
 			}
 
-			if (validItems.length > 0) openCancelPrompt("Taking storage items to inventory...", (e) => controller.abort());
+			if (validItems.length > 0) openPromptWithButton("Taking storage items to inventory...", "Cancel", (e) => controller.abort());
 
 			for (const [index, value] of validItems.entries()) {
 				try {
@@ -816,9 +816,7 @@
 				scrapValueInfo = document.createElement("div");
 				scrapValueInfo.id = "scrapValueInfo";
 				scrapValueInfo.classList.add("itemData");
-				scrapValueInfo.innerHTML = `
-					Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(itemId, quantity))}
-				`;
+				scrapValueInfo.innerHTML = `Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(itemId, quantity))}`;
 				document.getElementById("infoBox").append(scrapValueInfo);
 
 				if (isInventorySlot && (globalData[itemId]["no_transfer"] == null || globalData[itemId]["no_transfer"] == "0")) {
@@ -836,9 +834,7 @@
 						for (let i = 0; i < length; i++) {
 							const data = trades[i];
 							let tradeInfo = document.createElement("div");
-							tradeInfo.innerHTML = `
-							${formatOrdinalNum(i + 1)} Trade: ${formatCurrency(data["price"])}
-						`;
+							tradeInfo.innerHTML = `${formatOrdinalNum(i + 1)} Trade: ${formatCurrency(data["price"])}`;
 							itemPricesInfo.appendChild(tradeInfo);
 						}
 					}
@@ -849,7 +845,7 @@
 		}
 	}
 
-	function marketItemPriceWithdrawHelper() {
+	function marketItemPWithdrawHelper() {
 		function updateBuyButton(marketRow) {
 			let itemPrice = marketRow.dataset.price;
 			if (itemPrice <= parseInt(userVars["DFSTATS_df_cash"])) {
@@ -944,6 +940,7 @@
 		interactionWindow.style.height = "270px";
 		interactionWindow.style.left = "0px";
 		interactionWindow.style.top = "80px";
+		interactionWindow.style.backgroundImage = "none";
 		interactionWindow.dataset.action = "giveToChar";
 		interactionWindow.className = "fakeSlot";
 		document.getElementById("sidebar").appendChild(interactionWindow);
@@ -974,10 +971,6 @@
 		button.addEventListener("click", buttonCallback);
 
 		gamecontent.append(button);
-	}
-
-	function openCancelPrompt(message, buttonCallback) {
-		openPromptWithButton(message, "Cancel", buttonCallback);
 	}
 
 	function openYesOrNoPrompt(message, yesCallback, noCallback) {
@@ -1145,26 +1138,6 @@
 		});
 	}
 
-	function clearSearchOnCategoryClickHelper() {
-		if (unsafeWindow.inventoryHolder == null) {
-			return;
-		}
-		if (unsafeWindow.marketHolder == null) {
-			return;
-		}
-		unsafeWindow.inventoryHolder.addEventListener("click", (event) => {
-			const searchField = document.getElementById("searchField");
-
-			if (searchField == null) {
-				return;
-			}
-
-			if (event.target.id == "cat" || event.target.id == "categoryChoice") {
-				searchField.value = "";
-			}
-		});
-	}
-
 	////////////////////////////
 	// SCRIPT INJECTION
 	////////////////////////////
@@ -1179,11 +1152,10 @@
 		storeStorageHelper();
 		takeStorageHelper();
 		quickMarketSearchLHelper();
-		clearSearchOnCategoryClickHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
 		repairArmorHelper();
 		marketItemPriceHelper();
-		marketItemPriceWithdrawHelper();
+		marketItemPWithdrawHelper();
 	}, 500);
 })();
