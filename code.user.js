@@ -440,97 +440,6 @@
 		});
 	}
 
-	function storeStorageHelper() {
-		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=50") == -1) {
-			return;
-		}
-		let storeInventoryButton = document.createElement("button");
-		storeInventoryButton.id = "customStoreInventoryButton";
-		storeInventoryButton.innerHTML = "Store All Items";
-		storeInventoryButton.classList.add("opElem");
-		storeInventoryButton.style.top = "418px";
-		storeInventoryButton.style.left = "120px";
-		unsafeWindow.inventoryHolder.appendChild(storeInventoryButton);
-
-		storeInventoryButton.addEventListener("click", async (e) => {
-			const controller = new AbortController();
-			let validItems = getInventorySlotsWithItem();
-
-			if (validItems.length > 0) openPromptWithButton("Storing inventory items to storage...", "Cancel", (e) => controller.abort());
-
-			for (const [index, value] of validItems.entries()) {
-				try {
-					await sleep(Math.random() * (50 - 0) + 0);
-					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", value.slot, `${unsafeWindow.findFirstEmptyStorageSlot() + 40}`, value.scrapValue, "store", controller);
-					unsafeWindow.playSound("swap");
-					await makeGetStorageRequest();
-					if (unsafeWindow.findFirstEmptyStorageSlot() === false) {
-						throw "Storage is full";
-					} else if (index === validItems.length - 1) {
-						unsafeWindow.updateAllFields();
-						throw "Inventory is empty";
-					}
-				} catch (error) {
-					unsafeWindow.updateAllFields();
-					return;
-				}
-			}
-		});
-	}
-
-	function takeStorageHelper() {
-		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=50") == -1) {
-			return;
-		}
-		let takeStorageButton = document.createElement("button");
-		takeStorageButton.id = "customStoreInventoryButton";
-		takeStorageButton.innerHTML = "Take All Items";
-		takeStorageButton.classList.add("opElem");
-		takeStorageButton.style.top = "71px";
-		takeStorageButton.style.left = "120px";
-		unsafeWindow.inventoryHolder.appendChild(takeStorageButton);
-
-		takeStorageButton.addEventListener("click", async (e) => {
-			const controller = new AbortController();
-			const storageSlots = userVars.DFSTATS_df_storage_slots;
-			let validItems = [];
-
-			for (let i = 1; i <= storageSlots; i++) {
-				if (unsafeWindow.storageBox[`df_store${i}_type`] != null) {
-					let slot = i;
-					let id = unsafeWindow.storageBox[`df_store${i}_type`];
-					let quantity = unsafeWindow.storageBox[`df_store${i}_quantity`].replace(/\D/g, "");
-					let scrapValue = unsafeWindow.scrapValue(id, quantity);
-					validItems.push({
-						slot: slot,
-						id: id,
-						scrapValue: scrapValue,
-					});
-				}
-			}
-
-			if (validItems.length > 0) openPromptWithButton("Taking storage items to inventory...", "Cancel", (e) => controller.abort());
-
-			for (const [index, value] of validItems.entries()) {
-				try {
-					await sleep(Math.random() * (50 - 0) + 0);
-					await makeInventoryRequest("0", "0", "undefined`undefined", "-1", value.id, "", `${value.slot + 40}`, `${unsafeWindow.findFirstEmptyGenericSlot("inv")}`, value.scrapValue, "take", controller);
-					unsafeWindow.playSound("swap");
-					await makeGetStorageRequest();
-					if (unsafeWindow.findFirstEmptyGenericSlot("inv") === false) {
-						throw "Inventory is full";
-					} else if (index === validItems.length - 1) {
-						unsafeWindow.updateAllFields();
-						throw "Storage is empty";
-					}
-				} catch (error) {
-					unsafeWindow.updateAllFields();
-					return;
-				}
-			}
-		});
-	}
-
 	async function replenishHungerHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=35") == -1) {
 			return;
@@ -1138,8 +1047,6 @@
 		outpostQuickLinksHelper();
 		expandInventoryToSidebarHelper();
 		scrapInventoryHelper();
-		storeStorageHelper();
-		takeStorageHelper();
 		quickMarketSearchLHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
