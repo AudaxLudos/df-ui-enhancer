@@ -804,20 +804,9 @@
 				}
 
 				const itemId = target.dataset.type?.split("_")[0] || null;
-				const quantity = target.dataset.quantity || 1;
 				if (!itemId) {
 					return;
 				}
-
-				let scrapValueInfo = document.getElementById("scrapValueInfo");
-				if (scrapValueInfo) {
-					scrapValueInfo.remove();
-				}
-				scrapValueInfo = document.createElement("div");
-				scrapValueInfo.id = "scrapValueInfo";
-				scrapValueInfo.classList.add("itemData");
-				scrapValueInfo.innerHTML = `Scrap Value: ${formatCurrency(unsafeWindow.scrapValue(itemId, quantity))}`;
-				document.getElementById("infoBox").append(scrapValueInfo);
 
 				if (isInventorySlot && (globalData[itemId]["no_transfer"] == null || globalData[itemId]["no_transfer"] == "0")) {
 					let itemTradeData = await getItemTradeData(itemId);
