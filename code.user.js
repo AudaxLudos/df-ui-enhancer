@@ -318,7 +318,7 @@
 		let playerHealthPercent = (userVars["DFSTATS_df_hpcurrent"] / userVars["DFSTATS_df_hpmax"]) * 100;
 		let suitableMeds = getSuitableMeds();
 		let optimalMed = null;
-		let adminsterMed = false;
+		let administerMed = false;
 		let closestHealth = playerHealthPercent;
 
 		for (const value of suitableMeds) {
@@ -330,22 +330,22 @@
 
 			if (totalHealthRaw <= 100 && totalHealthRaw > closestHealth) {
 				optimalMed = value;
-				adminsterMed = false;
+				administerMed = false;
 				closestHealth = totalHealthRaw;
 			}
 
 			if (totalHealthDoc <= 100 && totalHealthDoc > closestHealth) {
 				optimalMed = value;
-				adminsterMed = true;
+				administerMed = true;
 				closestHealth = totalHealthDoc;
 			}
 		}
 
 		if (optimalMed != null && parseInt(optimalMed["needdoctor"]) == 0) {
-			adminsterMed = false;
+			administerMed = false;
 		}
 
-		return [optimalMed, adminsterMed];
+		return [optimalMed, administerMed];
 	}
 
 	function getInventorySlotsWithItem() {
@@ -394,7 +394,7 @@
 	}
 
 	////////////////////////////
-	// UI ENCHANCERS
+	// UI ENHANCERS
 	////////////////////////////
 	function scrapInventoryHelper() {
 		if (unsafeWindow.inventoryHolder == null || window.location.href.indexOf("index.php?page=24") == -1) {
@@ -538,7 +538,7 @@
 		let playerCash = userVars["DFSTATS_df_cash"];
 		let inventorySlotNumber = unsafeWindow.findLastEmptyGenericSlot("inv");
 		let usableMed = getUsableMed();
-		let adminsterMed = usableMed[1];
+		let administerMed = usableMed[1];
 
 		try {
 			if (parseInt(userVars["DFSTATS_df_hpcurrent"]) >= parseInt(userVars["DFSTATS_df_hpmax"])) {
@@ -548,7 +548,7 @@
 				throw "Inventory is full";
 			}
 
-			let medAdminsterLevel = usableMed[0]["level"] - 5;
+			let medAdministerLevel = usableMed[0]["level"] - 5;
 			let availableMeds = await makeMarketSearchRequest(encodeURI(usableMed[0]["name"].substring(0, 15)), "buyinglistitemname", "", "trades", filterItemTradeResponseText);
 
 			if (availableMeds === undefined || availableMeds.length == 0) {
@@ -563,13 +563,13 @@
 			}
 
 			let usableService = null;
-			if (adminsterMed) {
+			if (administerMed) {
 				let availableServices = await makeMarketSearchRequest("", "buyinglist", "Doctor", "services", filterServiceResponseText);
-				if (availableServices[medAdminsterLevel] == null) {
-					throw `No level ${medAdminsterLevel} doctor services available`;
+				if (availableServices[medAdministerLevel] == null) {
+					throw `No level ${medAdministerLevel} doctor services available`;
 				}
 
-				usableService = availableServices[medAdminsterLevel][0];
+				usableService = availableServices[medAdministerLevel][0];
 
 				totalCost += usableService["price"];
 
@@ -581,12 +581,12 @@
 			restoreHealthButton.disabled = false;
 			restoreHealthButton.addEventListener("click", () => {
 				openYesOrNoPrompt(
-					`Are you sure you want to buy and ${adminsterMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
+					`Are you sure you want to buy and ${administerMed ? "administer" : "use"} <span style="color: red;">${usableMed[0]["name"]}</span> for <span style="color: #FFCC00;">${formatCurrency(totalCost)}</span>?`,
 					async (e) => {
 						openLoadingPrompt("Restoring health...");
 						try {
 							await makeInventoryRequest("undefined", buyableMed["tradeId"], "undefined`undefined", `${buyableMed["price"]}`, "", "", "0", "0", "0", "newbuy", null);
-							if (adminsterMed) {
+							if (administerMed) {
 								await makeInventoryRequest("0", usableService["userId"], "undefined`undefined", usableService["price"], "", "", inventorySlotNumber, "0", unsafeWindow.getUpgradePrice(), "buyadminister", null);
 							} else {
 								await makeInventoryRequest("0", "0", "undefined`undefined", "-1", usableMed[0]["code"], "", inventorySlotNumber, "0", "0", "newuse", null);
@@ -743,7 +743,7 @@
 		}
 	}
 
-	function marketItemPWithdrawHelper() {
+	function marketItemPriceWithdrawHelper() {
 		function updateBuyButton(marketRow) {
 			let itemPrice = marketRow.dataset.price;
 			if (itemPrice <= parseInt(userVars["DFSTATS_df_cash"])) {
@@ -771,7 +771,7 @@
 		let target = document.getElementById("itemDisplay");
 		let config = { childList: true, subtree: true };
 
-		let marketListObserver = new MutationObserver((mutationList, observer) => {
+		let marketListObserver = new MutationObserver((mutationList) => {
 			if (unsafeWindow.marketScreen == "buy") {
 				for (let mutation of mutationList) {
 					if (mutation.addedNodes.length > 0) {
@@ -997,7 +997,7 @@
 		// Adjust window when screen resizes
 		window.addEventListener(
 			"resize",
-			function (event) {
+			function () {
 				let mainScreenEdge = $("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_edge.jpg']").offset();
 				let linksContainer = document.getElementById("customOutpostLinks");
 				linksContainer.style.top = `${mainScreenEdge.top}px`;
@@ -1052,6 +1052,6 @@
 		restoreHealthHelper();
 		repairArmorHelper();
 		marketItemPriceHelper();
-		marketItemPWithdrawHelper();
+		marketItemPriceWithdrawHelper();
 	}, 500);
 })();
