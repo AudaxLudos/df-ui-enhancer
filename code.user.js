@@ -402,7 +402,7 @@
 		}
 		let scrapAllButton = document.createElement("button");
 		scrapAllButton.id = "customScrapAllButton";
-		scrapAllButton.innerHTML = "Scrap All Items";
+		scrapAllButton.innerHTML = "Scrap Inventory Items";
 		scrapAllButton.classList.add("opElem");
 		scrapAllButton.style.top = "418px";
 		scrapAllButton.style.left = "410px";
