@@ -950,7 +950,7 @@
 		if (!mainScreenEdge) {
 			return;
 		}
-		let isPlayerInPersonalOutpost = userVars["df_tradezone"] != 21 || userVars["df_tradezone"] != 22 || userVars["df_tradezone"] != 10
+		let isPlayerInPersonalOutpost = userVars != null && (userVars["df_tradezone"] != 21 || userVars["df_tradezone"] != 22 || userVars["df_tradezone"] != 10)
 		let standardOutpostLinks = [
 			{ name: "Marketplace", id: "35" },
 			{ name: "Yard", id: "24" },
@@ -1019,7 +1019,7 @@
 		);
 	}
 
-	function quickMarketSearchLHelper() {
+	function quickMarketSearchHelper() {
 		if (unsafeWindow.inventoryHolder == null) {
 			return;
 		}
@@ -1052,6 +1052,8 @@
 	// SCRIPT INJECTION
 	////////////////////////////
 	setTimeout(() => {
+		userVars = unsafeWindow.userVars;
+		globalData = unsafeWindow.globalData;
 		loadItemsTradeData();
 
 		closePopupAds();
@@ -1059,7 +1061,7 @@
 		outpostQuickLinksHelper();
 		expandInventoryToSidebarHelper();
 		scrapInventoryHelper();
-		quickMarketSearchLHelper();
+		quickMarketSearchHelper();
 		replenishHungerHelper();
 		restoreHealthHelper();
 		repairArmorHelper();
