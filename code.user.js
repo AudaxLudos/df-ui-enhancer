@@ -946,7 +946,12 @@
 		if (unsafeWindow.jQuery == null) {
 			return;
 		}
-		let outpostLinks = [
+		let mainScreenEdge = $("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_edge.jpg']").offset();
+		if (!mainScreenEdge) {
+			return;
+		}
+		let isPlayerInPersonalOutpost = userVars["df_tradezone"] != 21 || userVars["df_tradezone"] != 22 || userVars["df_tradezone"] != 10
+		let standardOutpostLinks = [
 			{ name: "Marketplace", id: "35" },
 			{ name: "Yard", id: "24" },
 			{ name: "Bank", id: "15" },
@@ -957,10 +962,14 @@
 			{ name: "Gambling Den", id: "49" },
 			{ name: "Fast Travel", id: "61" },
 		];
-		let mainScreenEdge = $("td[background*='https://files.deadfrontier.com/deadfrontier/DF3Dimages/mainpage/right_edge.jpg']").offset();
-		if (!mainScreenEdge) {
-			return;
-		}
+		let personalOutpostLinks = [
+			{ name: "Trading", id: "35" },
+			{ name: "Bank", id: "15" },
+			{ name: "Storage", id: "50" },
+			{ name: "Crafting", id: "59" },
+			{ name: "Records", id: "22" },
+		];
+		let outpostLinks = standardOutpostLinks
 		let linksContainer = document.createElement("div");
 		linksContainer.id = "customOutpostLinks";
 		linksContainer.style.width = "120px";
@@ -974,6 +983,9 @@
 		linksContainer.style.right = `${mainScreenEdge.left + 60}px`;
 		linksContainer.style.zIndex = "20";
 
+		if (isPlayerInPersonalOutpost) {
+			outpostLinks = personalOutpostLinks
+		}
 		for (let i in outpostLinks) {
 			let linkDiv = document.createElement("div");
 			linkDiv.style.textAlign = "center";
