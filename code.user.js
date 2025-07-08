@@ -950,8 +950,10 @@
 		if (!mainScreenEdge) {
 			return;
 		}
-		let isPlayerInPersonalOutpost = userVars != null && (userVars["df_tradezone"] != 21 || userVars["df_tradezone"] != 22 || userVars["df_tradezone"] != 10)
-		let standardOutpostLinks = [
+		let flag1 = userVars["DFSTATS_df_tradezone"] !== undefined && (userVars["DFSTATS_df_tradezone"] != 21 && userVars["DFSTATS_df_tradezone"] != 22 && userVars["DFSTATS_df_tradezone"] != 10)
+		let flag2 = userVars["df_tradezone"] !== undefined && (userVars["df_tradezone"] != 21 && userVars["df_tradezone"] != 22 && userVars["df_tradezone"] != 10)
+		let isInPersonalOutpost = flag1 || flag2
+		let normalOutpostLinks = [
 			{ name: "Marketplace", id: "35" },
 			{ name: "Yard", id: "24" },
 			{ name: "Bank", id: "15" },
@@ -969,7 +971,10 @@
 			{ name: "Crafting", id: "59" },
 			{ name: "Records", id: "22" },
 		];
-		let outpostLinks = standardOutpostLinks
+		let outpostLinks = normalOutpostLinks
+		if (isInPersonalOutpost) {
+			outpostLinks = personalOutpostLinks
+		}
 		let linksContainer = document.createElement("div");
 		linksContainer.id = "customOutpostLinks";
 		linksContainer.style.width = "120px";
@@ -982,10 +987,6 @@
 		linksContainer.style.top = `${mainScreenEdge.top}px`;
 		linksContainer.style.right = `${mainScreenEdge.left + 60}px`;
 		linksContainer.style.zIndex = "20";
-
-		if (isPlayerInPersonalOutpost) {
-			outpostLinks = personalOutpostLinks
-		}
 		for (let i in outpostLinks) {
 			let linkDiv = document.createElement("div");
 			linkDiv.style.textAlign = "center";
@@ -1052,8 +1053,6 @@
 	// SCRIPT INJECTION
 	////////////////////////////
 	setTimeout(() => {
-		userVars = unsafeWindow.userVars;
-		globalData = unsafeWindow.globalData;
 		loadItemsTradeData();
 
 		closePopupAds();
